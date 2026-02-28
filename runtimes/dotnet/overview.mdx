@@ -1,0 +1,236 @@
+---
+title: .NET Runtime
+description: Deploy and scale .NET applications on Zerops with automatic compilation and high performance.
+---
+
+## What is .NET on Zerops?
+
+Zerops provides a fully managed .NET runtime environment with automatic compilation, built-in NuGet support, and zero-config deployment. Build and deploy ASP.NET Core, Blazor, and other .NET applications with enterprise-grade reliability.
+
+<Info>
+.NET is the free, open-source, cross-platform framework for building modern apps and powerful cloud services. [Learn more about .NET →](https://dotnet.microsoft.com/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Latest .NET Versions" icon="code">
+    Support for .NET 6, 7, and 8 with LTS versions
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on resource usage
+  </Card>
+  <Card title="NuGet Integration" icon="box">
+    Built-in NuGet package management
+  </Card>
+  <Card title="High Performance" icon="bolt">
+    Optimized runtime with AOT compilation support
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+- .NET 8 (Latest LTS)
+- .NET 7
+- .NET 6 (LTS)
+
+<Note>
+You can change the .NET version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Quick Example
+
+```yaml
+project:
+  name: my-dotnet-app
+services:
+  - hostname: app
+    type: dotnet@8
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-dotnet-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The .NET runtime includes:
+
+- Alpine Linux or Ubuntu
+- .NET SDK (selected version)
+- NuGet package manager
+- Git utilities
+- Zerops CLI tools
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="ASP.NET Core Web APIs">
+    Build high-performance REST APIs.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: dotnet@8
+          buildCommands:
+            - dotnet publish -c Release -o out
+          deployFiles:
+            - out
+        run:
+          start: dotnet out/MyApi.dll
+    ```
+  </Accordion>
+  
+  <Accordion title="Blazor Applications">
+    Deploy interactive web UIs with Blazor.
+    
+    ```yaml
+    zerops:
+      - setup: web
+        build:
+          base: dotnet@8
+          buildCommands:
+            - dotnet publish -c Release -o publish
+          deployFiles:
+            - publish
+        run:
+          start: dotnet publish/MyBlazorApp.dll
+    ```
+  </Accordion>
+  
+  <Accordion title="Minimal APIs">
+    Create lightweight APIs with minimal API syntax.
+    
+    ```yaml
+    zerops:
+      - setup: app
+        build:
+          base: dotnet@8
+          buildCommands:
+            - dotnet publish -c Release -o out
+          deployFiles:
+            - out
+        run:
+          start: dotnet out/MinimalApi.dll
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Process
+
+### Standard Build
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: dotnet@8
+      buildCommands:
+        - dotnet restore
+        - dotnet publish -c Release -o out
+      deployFiles:
+        - out
+      cache: ~/.nuget/packages
+```
+
+### Optimized Build
+
+```yaml
+build:
+  base: dotnet@8
+  buildCommands:
+    - dotnet publish -c Release -o out --no-restore
+  deployFiles:
+    - out
+```
+
+## Runtime Configuration
+
+### ASP.NET Core App
+
+```yaml
+run:
+  start: dotnet out/MyApp.dll
+  ports:
+    - port: 5000
+      httpSupport: true
+  envVariables:
+    ASPNETCORE_URLS: http://+:5000
+    ASPNETCORE_ENVIRONMENT: Production
+```
+
+### With Kestrel Configuration
+
+```yaml
+run:
+  start: dotnet out/MyApp.dll
+  envVariables:
+    ASPNETCORE_URLS: http://+:5000
+    Kestrel__Limits__MaxRequestBodySize: 52428800
+```
+
+## Framework Examples
+
+### ASP.NET Core Web API
+
+```csharp title="Program.cs"
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapGet("/", () => new { message = "Hello from .NET on Zerops!" });
+app.MapGet("/health", () => new { status = "healthy" });
+
+app.Run();
+```
+
+### Minimal API
+
+```csharp title="Program.cs"
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello from .NET Minimal API!");
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+app.Run();
+```
+
+## Database Integration
+
+### Entity Framework Core
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = $"Host=db;Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
+    $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
+    $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/dotnet/quickstart">
+    Deploy your first .NET application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-dotnet-hello-world">
+    Explore .NET examples
+  </Card>
+</CardGroup>

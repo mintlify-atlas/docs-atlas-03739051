@@ -1,0 +1,181 @@
+---
+title: CLI Overview
+description: Learn about zCLI, the powerful command-line tool for managing Zerops services, projects, and infrastructure from your terminal
+---
+
+zCLI is the official command-line tool for Zerops that allows you to manage services, simplify interactions, and configure infrastructure directly from your terminal.
+
+## What is zCLI?
+
+zCLI provides a comprehensive command-line interface for Zerops, enabling you to:
+
+- Deploy and manage applications
+- Create and configure projects and services
+- Access Zerops VPN for secure service connections
+- View logs and monitor your services
+- Manage environment variables
+- Import and export project configurations
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Fast Deployments" icon="rocket">
+    Deploy your applications with a single command using `zcli push`
+  </Card>
+  <Card title="VPN Access" icon="shield">
+    Connect securely to your services via Zerops VPN
+  </Card>
+  <Card title="Project Management" icon="folder">
+    Create, configure, and manage projects from the terminal
+  </Card>
+  <Card title="Real-time Logs" icon="terminal">
+    Stream and monitor application logs in real-time
+  </Card>
+</CardGroup>
+
+## Supported Platforms
+
+zCLI is available for all major operating systems:
+
+- **Linux** (x86 & x64)
+- **macOS** (x86-64 & ARM64)
+- **Windows** (x64)
+
+## Quick Start
+
+Get started with zCLI in three simple steps:
+
+<Steps>
+  <Step title="Install zCLI">
+    Install zCLI using your preferred method:
+    
+    <CodeGroup>
+    ```bash Linux/macOS
+    curl -L https://zerops.io/zcli/install.sh | sh
+    ```
+    
+    ```powershell Windows
+    irm https://zerops.io/zcli/install.ps1 | iex
+    ```
+    
+    ```bash npm
+    npm i -g @zerops/zcli
+    ```
+    </CodeGroup>
+    
+    See the [Installation guide](/cli/installation) for more options.
+  </Step>
+  
+  <Step title="Authenticate">
+    Log in using your Personal Access Token:
+    
+    ```bash
+    zcli login <your-token>
+    ```
+    
+    Get your token from [Access Token management](https://app.zerops.io/settings/token-management).
+  </Step>
+  
+  <Step title="Deploy Your App">
+    Deploy your application with a single command:
+    
+    ```bash
+    zcli push
+    ```
+  </Step>
+</Steps>
+
+## Common Use Cases
+
+### Deploy Applications
+
+Deploy your application code to Zerops:
+
+```bash
+zcli push
+```
+
+This command builds and deploys your application based on the configuration in your `zerops.yml` file.
+
+### Access Services via VPN
+
+Connect to your services securely using the Zerops VPN:
+
+```bash
+zcli vpn up
+```
+
+Once connected, you can access your databases, caches, and other services directly from your local machine.
+
+### View Logs
+
+Stream real-time logs from your services:
+
+```bash
+zcli service log --follow
+```
+
+### Manage Projects
+
+Create and manage projects from the command line:
+
+```bash
+# Create a new project
+zcli project create --name "My Project"
+
+# List all projects
+zcli project list
+
+# Import services from YAML
+zcli project service-import ./services.yml
+```
+
+## Configuration
+
+zCLI supports multiple configuration methods:
+
+1. **Configuration files** - `.zcli.yaml` in your project or home directory
+2. **Environment variables** - Prefix any flag with `ZEROPS_`
+3. **Command-line flags** - Pass options directly to commands
+
+See the [Configuration guide](/cli/configuration) for detailed information.
+
+## Getting Help
+
+Every command supports the `--help` flag:
+
+```bash
+zcli --help
+zcli push --help
+zcli vpn up --help
+```
+
+You can also use the built-in support command:
+
+```bash
+zcli support
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/cli/installation">
+    Detailed installation instructions for all platforms
+  </Card>
+  <Card title="Commands Reference" icon="book" href="/cli/commands">
+    Complete reference of all available commands
+  </Card>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Learn how to configure zCLI for your workflow
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the REST API as an alternative to CLI
+  </Card>
+</CardGroup>
+
+## Community & Support
+
+- **GitHub**: [zeropsio/zcli](https://github.com/zeropsio/zcli)
+- **Issues**: Report bugs or request features on GitHub
+- **Documentation**: You're reading it!
+- **Zerops Support**: Available through the dashboard

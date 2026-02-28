@@ -1,0 +1,269 @@
+---
+title: Shared Storage
+description: Fully managed shared filesystem for persistent file sharing between containers and services.
+---
+
+Zerops provides a fully managed and scaled **Shared Storage** service, which can be mounted to your runtime services. It offers:
+
+- Persistent file sharing between containers of the same service or different services
+- Standard filesystem operations through a POSIX-compatible interface
+- Built-in high-availability configuration
+
+## What is Shared Storage?
+
+Shared Storage provides a network-attached filesystem that multiple containers and services can access simultaneously. Think of it as a shared drive that all your services can read from and write to.
+
+### Key Features
+
+- **Persistent Storage** - Data persists across container restarts and deployments
+- **Multi-Container Access** - Share files between containers of the same service
+- **Cross-Service Access** - Share files between different services in your project
+- **POSIX Compatible** - Standard filesystem operations (read, write, delete, etc.)
+- **Automatic Scaling** - Storage scales based on usage
+- **High Availability** - Built-in redundancy and failover
+
+## Common Use Cases
+
+### Content Management Systems
+
+Share uploaded media files across multiple web server instances:
+
+```yaml
+services:
+  - hostname: web
+    type: php-apache@8.3
+    minContainers: 3
+    sharedStorage:
+      - mountPath: /var/www/html/uploads
+        size: 10  # Size in GB
+```
+
+### Microservices Data Sharing
+
+Share data between different services:
+
+```yaml
+services:
+  - hostname: processor
+    type: nodejs@20
+    sharedStorage:
+      - mountPath: /app/shared-data
+        size: 5
+  
+  - hostname: analyzer
+    type: python@3.12
+    sharedStorage:
+      - mountPath: /app/data
+        size: 5  # Mount the same storage
+```
+
+### Log Aggregation
+
+Centralize logs from multiple services:
+
+```yaml
+services:
+  - hostname: api
+    type: nodejs@20
+    sharedStorage:
+      - mountPath: /var/log/app
+        size: 2
+  
+  - hostname: worker
+    type: nodejs@20
+    sharedStorage:
+      - mountPath: /var/log/app
+        size: 2  # Same storage for centralized logs
+```
+
+### File Processing Pipelines
+
+Share files between processing stages:
+
+```yaml
+services:
+  - hostname: uploader
+    type: nodejs@20
+    sharedStorage:
+      - mountPath: /app/files
+        size: 20
+  
+  - hostname: processor
+    type: python@3.12
+    sharedStorage:
+      - mountPath: /app/input
+        size: 20  # Access uploaded files
+```
+
+## Connecting to Services
+
+To connect Shared Storage to your services:
+
+1. **Define in Import YAML** - Specify shared storage in your service configuration
+2. **Configure Mount Path** - Choose where to mount the storage in your container
+3. **Set Storage Size** - Allocate appropriate storage capacity
+
+### Example Configuration
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    sharedStorage:
+      - mountPath: /app/shared
+        size: 10  # 10 GB
+      - mountPath: /app/cache
+        size: 5   # 5 GB
+```
+
+## Usage and Limitations
+
+### Supported Operations
+
+- Read and write files
+- Create and delete directories
+- Move and rename files
+- Set file permissions
+- Standard POSIX filesystem operations
+
+### Technical Limitations
+
+- **Performance**: Network filesystem has higher latency than local disk
+- **Concurrency**: File locking behavior depends on the underlying implementation
+- **Size Limits**: Maximum storage size depends on your plan
+- **Not Suitable For**:
+  - High-frequency small writes (use local storage or database)
+  - Database storage (use dedicated database services)
+  - Temporary files (use local `/tmp` directory)
+
+### Best Practices
+
+#### Performance
+
+- Use for relatively infrequent reads/writes
+- Cache frequently accessed files in memory
+- Use local storage for temporary files
+- Implement proper file locking for concurrent access
+
+#### Organization
+
+- Use clear directory structures
+- Implement naming conventions
+- Clean up old/unused files regularly
+- Document shared storage usage patterns
+
+#### Security
+
+- Set appropriate file permissions
+- Validate file uploads and contents
+- Implement access controls in your application
+- Monitor storage usage and access patterns
+
+## Managing Storage
+
+### Accessing Files
+
+You can access Shared Storage:
+
+1. **From Your Application** - Standard filesystem operations
+2. **Via Zerops VPN** - Direct access for debugging and management
+3. **Through zCLI** - Command-line operations
+
+### Monitoring Usage
+
+Monitor your Shared Storage through:
+
+- **Zerops GUI** - View storage usage and metrics
+- **Application Metrics** - Track file operations in your code
+- **Logs** - Monitor access patterns and errors
+
+## Backup Configuration
+
+Shared Storage supports automated backups:
+
+- Configure backup schedules
+- Set retention policies
+- Manual backup triggers
+- Point-in-time recovery
+
+For detailed backup configuration, see the [Zerops Backups](/features/backup) documentation.
+
+## Code Examples
+
+### Node.js File Upload
+
+```javascript
+import fs from 'fs/promises';
+import path from 'path';
+
+const UPLOAD_DIR = '/app/shared/uploads';
+
+async function saveUploadedFile(file, filename) {
+  const filepath = path.join(UPLOAD_DIR, filename);
+  await fs.writeFile(filepath, file);
+  return filepath;
+}
+
+async function getUploadedFile(filename) {
+  const filepath = path.join(UPLOAD_DIR, filename);
+  return await fs.readFile(filepath);
+}
+```
+
+### Python File Processing
+
+```python
+import os
+from pathlib import Path
+
+SHARED_DIR = Path('/app/shared/data')
+
+def save_processed_file(filename, content):
+    filepath = SHARED_DIR / filename
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    filepath.write_text(content)
+    return str(filepath)
+
+def list_shared_files():
+    return [f.name for f in SHARED_DIR.iterdir() if f.is_file()]
+```
+
+### Go File Operations
+
+```go
+import (
+    "os"
+    "path/filepath"
+)
+
+const sharedDir = "/app/shared/files"
+
+func saveFile(filename string, data []byte) error {
+    filepath := filepath.Join(sharedDir, filename)
+    return os.WriteFile(filepath, data, 0644)
+}
+
+func readFile(filename string) ([]byte, error) {
+    filepath := filepath.Join(sharedDir, filename)
+    return os.ReadFile(filepath)
+}
+```
+
+## Technical Details
+
+For in-depth information about the technical architecture and deployment options, see the [Technical Details](/shared-storage/tech-details) documentation.
+
+## Popular Guides
+
+- [zCLI](/references/cli) - Command-line tool for managing Zerops services
+- [Zerops VPN](/references/networking/vpn) - Securely access your shared storage
+- [Backups](/features/backup) - Configure automatic backups
+- [Environment Variables](/features/env-variables) - Configure your application
+
+## Support
+
+Need help with Shared Storage?
+
+- Join our [Discord community](https://discord.gg/zeropsio) - Get help from our team and other members
+- Check the documentation for detailed guides
+- Share your knowledge and help others in the community

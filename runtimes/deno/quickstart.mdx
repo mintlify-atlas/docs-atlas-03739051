@@ -1,0 +1,222 @@
+---
+title: Deno Quickstart
+description: Deploy your first Deno application on Zerops in minutes.
+---
+
+This guide will help you deploy a Deno application on Zerops quickly.
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Deno
+
+## Deploy Using a Recipe
+
+<Steps>
+  <Step title="Log in to Zerops">
+    Navigate to [app.zerops.io](https://app.zerops.io).
+  </Step>
+  
+  <Step title="Import the project">
+    Click **Import a project** and paste:
+    
+    ```yaml
+    project:
+      name: my-deno-app
+      tags:
+        - deno
+    
+    services:
+      - hostname: api
+        type: deno@1
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-deno
+    
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+        priority: 1
+    ```
+  </Step>
+  
+  <Step title="Wait for deployment">
+    Zerops will build and deploy automatically (2-3 minutes).
+  </Step>
+  
+  <Step title="Access your app">
+    Open the subdomain URL from the **IP addresses & Public Routing** section.
+  </Step>
+</Steps>
+
+## Deploy Your Own Deno App
+
+### 1. Create a Deno Service
+
+<Tabs>
+  <Tab title="Using GUI">
+    1. Click **Add new service**
+    2. Select **Deno**
+    3. Choose version (1 or latest)
+    4. Set hostname (e.g., "api")
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    ```yaml title="description.yaml"
+    project:
+      name: my-project
+    
+    services:
+      - hostname: api
+        type: deno@1
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+</Tabs>
+
+### 2. Create Your Deno Application
+
+```typescript title="server.ts"
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+
+const handler = (req: Request): Response => {
+  return new Response("Hello from Deno on Zerops!");
+};
+
+const port = parseInt(Deno.env.get("PORT") || "8000");
+serve(handler, { port });
+```
+
+### 3. Add zerops.yaml
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: api
+    build:
+      base: deno@1
+      buildCommands:
+        - deno cache server.ts
+      deployFiles:
+        - server.ts
+    
+    run:
+      base: deno@1
+      ports:
+        - port: 8000
+          httpSupport: true
+      start: deno run --allow-net --allow-env server.ts
+```
+
+### 4. Deploy
+
+<Tabs>
+  <Tab title="From Git">
+    1. Push code to Git repository
+    2. In Zerops: **Deploy** → **From Git**
+    3. Enter repository URL
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    ```bash
+    zcli push
+    ```
+  </Tab>
+</Tabs>
+
+## Connect to PostgreSQL
+
+### Add Database Service
+
+```yaml
+services:
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+### Use in Your App
+
+```typescript title="server.ts"
+import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
+
+const client = new Client({
+  hostname: "db",  // Service hostname
+  port: 5432,
+  user: "db",
+  password: Deno.env.get("DB_PASSWORD"),
+  database: "db",
+});
+
+await client.connect();
+
+const result = await client.queryObject`
+  SELECT NOW() as time
+`;
+
+console.log(result.rows[0]);
+```
+
+<Info>
+  Services in the same project communicate via private network using hostnames.
+</Info>
+
+## Deno Permissions
+
+Deno requires explicit permissions. Common flags:
+
+```yaml
+run:
+  start: >
+    deno run
+    --allow-net
+    --allow-env
+    --allow-read
+    server.ts
+```
+
+<CardGroup cols={2}>
+  <Card title="--allow-net" icon="network-wired">
+    Network access (required for HTTP servers)
+  </Card>
+  
+  <Card title="--allow-env" icon="key">
+    Environment variable access
+  </Card>
+  
+  <Card title="--allow-read" icon="folder-open">
+    File system read access
+  </Card>
+  
+  <Card title="--allow-write" icon="pen-to-square">
+    File system write access
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+<Tabs>
+  <Tab title="In GUI">
+    1. Go to service settings
+    2. **Environment Variables**
+    3. Add variables
+  </Tab>
+  
+  <Tab title="In zerops.yaml">
+    ```yaml
+    run:
+      envVariables:
+        DENO_ENV: production
+        API_URL: https://api.example.com
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<Card title="Build Pipeline Configuration" icon="code" href="/runtimes/deno/build-pipeline">
+  Learn how to configure builds with zerops.yaml.
+</Card>

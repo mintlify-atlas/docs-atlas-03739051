@@ -1,0 +1,770 @@
+---
+title: CLI Reference
+description: Complete reference for the Zerops command-line tool (zCLI)
+---
+
+zCLI is the official command-line tool for Zerops that allows you to manage services, deploy applications, and configure infrastructure directly from your terminal.
+
+## Installation
+
+### Linux / macOS
+
+```bash
+curl -L https://zerops.io/zcli/install.sh | sh
+```
+
+zCLI will be installed in `/usr/bin` or `/usr/local/bin`.
+
+### Windows
+
+Execute the following command in PowerShell:
+
+```powershell
+irm https://zerops.io/zcli/install.ps1 | iex
+```
+
+zCLI will be installed in `C:\Program Files\` or `C:\Program Files (x86)\`.
+
+### Using Package Managers
+
+<CodeGroup>
+```bash npm
+npm i -g @zerops/zcli
+```
+
+```bash yarn
+yarn global add @zerops/zcli
+```
+</CodeGroup>
+
+### NixOS
+
+<Note>
+Make sure `nix-command` and flakes are enabled. Alternatively, use `--extra-experimental-features 'nix-command flakes'` with `nix`.
+</Note>
+
+```bash
+git clone https://github.com/zeropsio/zcli
+cd zcli
+nix develop
+nix build
+```
+
+The zCLI binary will be available in `result/bin`.
+
+### Manual Installation
+
+Download the latest release directly from [GitHub](https://github.com/zeropsio/zcli/releases).
+
+## Supported Platforms
+
+- Linux (x86 & x64)
+- macOS (x86-64 & ARM64)
+- Windows (x64)
+
+## Personal Access Tokens
+
+Personal access tokens allow you to securely access Zerops from the command line.
+
+### Creating an Access Token
+
+1. Go to [Access Token Management](https://app.zerops.io/settings/token-management) in the Zerops GUI
+2. Click **Generate a new access token**
+3. Copy the generated token
+
+<Warning>
+Store your access token securely. You won't be able to see it again after creation.
+</Warning>
+
+### Using an Access Token
+
+Log in to Zerops using your token:
+
+```bash
+zcli login <token>
+```
+
+### Managing Access Tokens
+
+You can create multiple access tokens and manage them in the Zerops GUI. Delete tokens anytime from the [Access Token Management](https://app.zerops.io/settings/token-management) page.
+
+## Basic Usage
+
+```bash
+zcli <command> [flags]
+```
+
+<Tip>
+All commands support the `-h, --help` flag to display help information.
+</Tip>
+
+## Configuration
+
+zCLI supports configuration via:
+1. Configuration files (`.zcli.yml`)
+2. Environment variables (`ZEROPS_*`)
+3. Command-line flags
+
+For detailed configuration options, see the [Configuration Guide](/references/zcli/configuration).
+
+## Command Reference
+
+### Account & VPN
+
+#### login
+
+Log in to Zerops using a personal access token.
+
+```bash
+zcli login <token>
+```
+
+#### logout
+
+Disconnect from VPN and log out from your Zerops account.
+
+```bash
+zcli logout
+```
+
+#### vpn up
+
+Connect to the Zerops VPN for secure access to your services.
+
+```bash
+zcli vpn up [project-id] [flags]
+```
+
+<ParamField path="--auto-disconnect" type="boolean">
+  Automatically disconnect from VPN if already connected
+</ParamField>
+
+<ParamField path="--mtu" type="number" default={1420}>
+  Set custom MTU value for WireGuard interface
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Project ID (required when you have access to multiple projects)
+</ParamField>
+
+<Note>
+Set a default project ID in `.zcli.yml` or via the `ZEROPS_PROJECTID` environment variable. See [Configuration](/references/zcli/configuration).
+</Note>
+
+#### vpn down
+
+Disconnect from the Zerops VPN.
+
+```bash
+zcli vpn down
+```
+
+### Project Management
+
+#### scope project
+
+Set the scope for a project. All commands requiring a project ID will use the selected one.
+
+```bash
+zcli scope project [project-id]
+```
+
+#### scope reset
+
+Reset the project scope.
+
+```bash
+zcli scope reset
+```
+
+#### project create
+
+Create a new project for a specified organization.
+
+```bash
+zcli project create [flags]
+```
+
+<ParamField path="--env-isolation" type="string" default="service">
+  Environment isolation rule: `service` or `none`
+</ParamField>
+
+<ParamField path="--mode" type="string" default="light">
+  Project mode: `light` or `serious`
+</ParamField>
+
+<ParamField path="--name" type="string">
+  Project name
+</ParamField>
+
+<ParamField path="--org-id" type="string">
+  Organization ID to create the project for
+</ParamField>
+
+<ParamField path="--tags" type="string[]">
+  Project tags (comma-separated or repeated flag)
+</ParamField>
+
+#### project delete
+
+Delete a project and all its services.
+
+```bash
+zcli project delete [project-id] [flags]
+```
+
+<ParamField path="--confirm" type="boolean">
+  Skip confirmation prompts for destructive operations
+</ParamField>
+
+<Warning>
+This action is irreversible. All services and data within the project will be permanently deleted.
+</Warning>
+
+#### project env
+
+Display environment variables for the current project scope.
+
+```bash
+zcli project env [flags]
+```
+
+<ParamField path="--export" type="boolean">
+  Prepend export keyword to each env: `export {{.Key}}={{.Value}}`
+</ParamField>
+
+<ParamField path="--service" type="string">
+  Service name in which context the environment variables are output
+</ParamField>
+
+<ParamField path="--template" type="string" default="{{.Key}}={{.Value}}">
+  Output template
+</ParamField>
+
+<ParamField path="--user-only" type="boolean">
+  Exclude all non-user environment variables
+</ParamField>
+
+#### project list
+
+List all projects you have access to.
+
+```bash
+zcli project list
+```
+
+#### project project-import
+
+Create a new project with one or more services from a YAML definition.
+
+```bash
+zcli project project-import <importYamlPath> [flags]
+```
+
+<ParamField path="--org-id" type="string">
+  Organization ID (required for multiple organizations)
+</ParamField>
+
+<ParamField path="--working-dir" type="string" default="./">
+  Custom working directory
+</ParamField>
+
+**Example:**
+
+```bash
+zcli project project-import ./zerops-project-import.yml
+```
+
+See the [Import YAML Reference](/references/import) for file format details.
+
+#### project service-import
+
+Create one or more services in an existing project from a YAML definition.
+
+```bash
+zcli project service-import <importYamlPath> [flags]
+```
+
+<ParamField path="-P, --project-id" type="string">
+  Project ID (required when you have access to multiple projects)
+</ParamField>
+
+**Example:**
+
+```bash
+zcli project service-import ./zerops-services.yml --project-id abc123
+```
+
+### Service Operations
+
+#### service list
+
+List all services in a project.
+
+```bash
+zcli service list [flags]
+```
+
+<ParamField path="-P, --project-id" type="string">
+  Project ID (required when you have access to multiple projects)
+</ParamField>
+
+#### service create
+
+Create a new service in a specified project.
+
+```bash
+zcli service create [flags]
+```
+
+<ParamField path="--env" type="string[]">
+  Environment variables as secrets (comma-separated or repeated flag)
+</ParamField>
+
+<ParamField path="--env-file" type="string">
+  File with environment variables (max 1.0 MiB)
+</ParamField>
+
+<ParamField path="--mode" type="string" default="non_ha">
+  Service mode: `ha` or `non_ha`
+</ParamField>
+
+<ParamField path="--name" type="string">
+  Service name
+</ParamField>
+
+<ParamField path="--noop" type="boolean">
+  Create service only if none with the same name exists
+</ParamField>
+
+#### service push
+
+Build and deploy your application to Zerops. This is the **recommended** deployment method.
+
+```bash
+zcli service push [service-id-or-name] [flags]
+```
+
+<ParamField path="--archive-file-path" type="string">
+  Create a tar.gz archive with application code
+</ParamField>
+
+<ParamField path="-g, --deploy-git-folder" type="boolean">
+  Include the .git folder in the upload
+</ParamField>
+
+<ParamField path="--disable-logs" type="boolean">
+  Disable logs during push
+</ParamField>
+
+<ParamField path="--no-git" type="boolean">
+  Upload entire working directory as-is (cannot be combined with --workspace-state or --deploy-git-folder)
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Project ID (required when you have access to multiple projects)
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Service ID (required when you have access to multiple services)
+</ParamField>
+
+<ParamField path="--setup" type="string">
+  Choose setup to use from zerops.yml
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Log additional debug data to the zCLI debug log file
+</ParamField>
+
+<ParamField path="--version-name" type="string">
+  Add a custom version name
+</ParamField>
+
+<ParamField path="--working-dir" type="string" default="./">
+  Custom working directory
+</ParamField>
+
+<ParamField path="-w, --workspace-state" type="string" default="all">
+  Version of workspace to push:
+  - `clean` - HEAD without local changes
+  - `staged` - Only staged files
+  - `all` - All staged and unstaged files (default)
+</ParamField>
+
+<ParamField path="--zerops-yaml-path" type="string">
+  Custom path to the zerops.yml file
+</ParamField>
+
+<Tip>
+You can use `zcli push` as a shorthand for `zcli service push`.
+</Tip>
+
+**Examples:**
+
+```bash
+# Push current directory to service
+zcli push
+
+# Push with custom version name
+zcli service push --version-name "v1.2.3"
+
+# Push only staged changes
+zcli service push --workspace-state staged
+
+# Push with verbose logging
+zcli service push -v
+```
+
+#### service deploy
+
+Deploy your application to Zerops. Similar to `push` but focuses on deployment only.
+
+```bash
+zcli service deploy [service-id-or-name] [flags]
+```
+
+Accepts the same flags as [`service push`](#service-push).
+
+#### service start / stop
+
+Start or stop a Zerops service.
+
+```bash
+zcli service start [service-id-or-name] [flags]
+zcli service stop [service-id-or-name] [flags]
+```
+
+<ParamField path="-P, --project-id" type="string">
+  Project ID (required when you have access to multiple projects)
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Service ID (required when you have access to multiple services)
+</ParamField>
+
+#### service delete
+
+Delete a Zerops service.
+
+```bash
+zcli service delete [service-id-or-name] [flags]
+```
+
+<ParamField path="--confirm" type="boolean">
+  Skip confirmation prompts
+</ParamField>
+
+<Warning>
+This action is irreversible. All data associated with the service will be permanently deleted.
+</Warning>
+
+#### service enable-subdomain
+
+Enable access to your service through a Zerops subdomain.
+
+```bash
+zcli service enable-subdomain [service-id-or-name] [flags]
+```
+
+<Note>
+Zerops subdomains are suitable for testing and development. For production, configure a custom domain.
+</Note>
+
+#### service log
+
+Get service runtime or build logs to stdout.
+
+```bash
+zcli service log [flags]
+```
+
+<ParamField path="--follow" type="boolean">
+  Continuously poll for new log messages
+</ParamField>
+
+<ParamField path="--format" type="string" default="FULL">
+  Log output format: `FULL`, `SHORT`, `JSON`, or `JSONSTREAM`
+</ParamField>
+
+<ParamField path="--format-template" type="string">
+  Custom log format template
+</ParamField>
+
+<ParamField path="--limit" type="number" default={100}>
+  Number of recent log messages to return (1-1000)
+</ParamField>
+
+<ParamField path="--message-type" type="string" default="APPLICATION">
+  Select `APPLICATION` or `WEBSERVER` log messages
+</ParamField>
+
+<ParamField path="--minimum-severity" type="string">
+  Filter by severity level
+</ParamField>
+
+<ParamField path="--show-build-logs" type="boolean">
+  Show build logs instead of runtime logs
+</ParamField>
+
+**Examples:**
+
+```bash
+# Follow application logs
+zcli service log --follow
+
+# View last 500 logs in JSON format
+zcli service log --limit 500 --format JSON
+
+# View build logs
+zcli service log --show-build-logs
+```
+
+### Utility Commands
+
+#### env
+
+Display global environment variables and their paths.
+
+```bash
+zcli env
+```
+
+#### version
+
+Show the current zCLI version.
+
+```bash
+zcli version
+```
+
+#### show-debug-logs
+
+Display debug logs for troubleshooting.
+
+```bash
+zcli show-debug-logs
+```
+
+#### support
+
+Display information about contacting Zerops support.
+
+```bash
+zcli support
+```
+
+#### completion
+
+Generate shell autocompletion scripts.
+
+```bash
+zcli completion {bash|fish|powershell|zsh}
+```
+
+**Available shells:**
+- `bash` - Bash shell
+- `fish` - Fish shell
+- `powershell` - PowerShell
+- `zsh` - Zsh shell
+
+**Example setup for Bash:**
+
+```bash
+zcli completion bash > ~/.zerops-completion.bash
+echo 'source ~/.zerops-completion.bash' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Example setup for Zsh:**
+
+```bash
+zcli completion zsh > "${fpath[1]}/_zcli"
+```
+
+## Common Workflows
+
+### Initial Setup
+
+1. Install zCLI
+2. Create a personal access token in the Zerops GUI
+3. Log in with the token
+
+```bash
+zcli login <your-token>
+```
+
+### Deploy an Application
+
+1. Ensure you have a `zerops.yaml` in your repository root
+2. Navigate to your project directory
+3. Push your code
+
+```bash
+zcli push
+```
+
+### Import a Project
+
+1. Create an import YAML file (see [Import YAML Reference](/references/import))
+2. Run the import command
+
+```bash
+zcli project project-import ./my-project.yml
+```
+
+### Connect via VPN
+
+1. Connect to the VPN
+2. Access your services using their internal hostnames
+
+```bash
+zcli vpn up
+# Now you can access services like: psql -h db ...
+```
+
+### View Logs
+
+```bash
+# Follow application logs
+zcli service log --follow
+
+# View recent build logs
+zcli service log --show-build-logs --limit 200
+```
+
+## Configuration Best Practices
+
+### Use Configuration Files
+
+Create a `.zcli.yml` in your project root:
+
+```yaml
+projectId: your-project-id
+serviceId: your-service-id
+workspaceState: all
+```
+
+### Use Environment Variables
+
+For CI/CD pipelines:
+
+```bash
+export ZEROPS_TOKEN=<your-token>
+export ZEROPS_PROJECTID=<project-id>
+export ZEROPS_SERVICEID=<service-id>
+
+zcli login $ZEROPS_TOKEN
+zcli service push
+```
+
+### Version Control
+
+Add to `.gitignore`:
+
+```
+.zcli.yml
+*.log
+```
+
+Commit a template instead:
+
+```yaml
+# .zcli.yml.example
+projectId: ""
+serviceId: ""
+```
+
+## Troubleshooting
+
+### Enable Verbose Logging
+
+```bash
+zcli service push --verbose
+```
+
+### View Debug Logs
+
+```bash
+zcli show-debug-logs
+
+# Or directly
+cat ~/.config/zerops/zerops.log
+```
+
+### VPN Connection Issues
+
+Check the MTU setting:
+
+```bash
+zcli vpn up --mtu 1280
+```
+
+See the [VPN Documentation](/references/networking/vpn) for more troubleshooting steps.
+
+### Permission Errors
+
+Ensure you have the necessary permissions in your Zerops account. Contact your project administrator if needed.
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Deploy to Zerops
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install zCLI
+        run: curl -L https://zerops.io/zcli/install.sh | sh
+      
+      - name: Deploy to Zerops
+        env:
+          ZEROPS_TOKEN: ${{ secrets.ZEROPS_TOKEN }}
+          ZEROPS_PROJECTID: ${{ secrets.ZEROPS_PROJECTID }}
+          ZEROPS_SERVICEID: ${{ secrets.ZEROPS_SERVICEID }}
+        run: |
+          zcli login $ZEROPS_TOKEN
+          zcli service push
+```
+
+### GitLab CI
+
+```yaml
+deploy:
+  stage: deploy
+  image: node:20
+  script:
+    - curl -L https://zerops.io/zcli/install.sh | sh
+    - zcli login $ZEROPS_TOKEN
+    - zcli service push
+  only:
+    - main
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="CLI Configuration" icon="gear" href="/references/zcli/configuration">
+    Detailed configuration options and environment variables
+  </Card>
+  <Card title="CLI Commands" icon="terminal" href="/references/zcli/commands">
+    Complete command reference
+  </Card>
+  <Card title="Import YAML" icon="file-import" href="/references/import">
+    Learn about project and service import format
+  </Card>
+  <Card title="zerops.yaml" icon="file-code" href="/zerops-yaml/specification">
+    Build and runtime configuration
+  </Card>
+</CardGroup>
+
+*Need help? Join our [Discord community](https://discord.gg/zeropsio).*

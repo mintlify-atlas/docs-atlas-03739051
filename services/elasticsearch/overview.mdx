@@ -1,0 +1,166 @@
+---
+title: Elasticsearch
+description: Deploy production-ready Elasticsearch instances with flexible scaling from standalone nodes to highly available clusters.
+---
+
+Deploy [Elasticsearch](https://www.elastic.co/elasticsearch/) instances in Zerops with flexible scaling options, from standalone nodes to highly available clusters.
+
+## Supported Versions
+
+Zerops currently supports Elasticsearch version **8.16**.
+
+When importing a service, use version format:
+- `elasticsearch@8.16`
+
+## Resource Requirements
+
+- **Minimum RAM**: 0.25 GB
+- **Recommended**: Scale based on your data volume and query complexity
+
+## Connection Details
+
+### Access Configuration
+
+- **Port**: 9200
+- **Protocol**: HTTP only
+- **Internal Access**: `http://{hostname}:9200`
+
+### Authentication
+
+Elasticsearch uses basic authentication:
+
+- **User**: `elastic`
+- **Password**: Randomly generated during service creation
+- Find password under **Access Details** in service detail page
+
+### Example Connection
+
+```bash
+curl -u elastic:generatedpassword http://elasticsearch:9200
+```
+
+## Configuration Options
+
+### Plugin Management
+
+Configure Elasticsearch plugins using environment variables:
+
+```yaml
+services:
+  - hostname: elasticsearch
+    type: elasticsearch@8.16
+    envSecrets:
+      PLUGINS: "analysis-icu,ingest-attachment"
+```
+
+**Plugin Configuration Details:**
+
+- Defines plugins to install at service startup
+- **Format**: `plugin1,plugin2,...` (comma-separated list)
+- Service automatically installs specified plugins during initialization
+- Removing a plugin from this list triggers uninstallation on service restart
+
+### JVM Heap Allocation
+
+Control the JVM heap size as a percentage of container memory:
+
+```yaml
+services:
+  - hostname: elasticsearch
+    type: elasticsearch@8.16
+    envSecrets:
+      HEAP_PERCENT: "75"
+```
+
+**Heap Configuration Details:**
+
+- Value represents the percentage of container memory allocated to JVM heap
+- **Default**: 50% of available container memory
+- **Valid range**: 1-100
+- To increase available memory, adjust the service's RAM allocation in scaling configuration
+
+<Note>
+Changes to `HEAP_PERCENT` require a service restart to take effect.
+</Note>
+
+## Example Configuration
+
+```yaml
+services:
+  - hostname: elasticsearch
+    type: elasticsearch@8.16
+    mode: HA
+    envSecrets:
+      PLUGINS: "analysis-icu,ingest-attachment"
+      HEAP_PERCENT: "75"
+```
+
+## Backup and Restore
+
+### Backup Format
+
+Elasticsearch backups are created using `elasticdump`:
+
+- **Format**: `.gz` (per index/component dump)
+- **Tooling**: `elasticdump`
+- **Compression**: Gzip compressed JSON data
+
+For backup configuration, scheduling, retention policies, and management options, see the [Zerops Backups](/features/backup) documentation.
+
+### Restoring Backups
+
+To restore an Elasticsearch backup:
+
+1. **Download** the backup file (`.gz`) from the Zerops UI
+2. **Extract** the compressed files to access the JSON data
+3. **Prepare** your target environment (clean existing indices or use a new instance)
+4. **Restore** using either:
+   - **elasticdump tool**: Use the same tool that created the backup for restoration via Zerops VPN or during deployment
+   - **Elasticsearch API**: Import the data through REST API [calls](https://www.elastic.co/docs/deploy-manage/tools/snapshot-and-restore/restore-snapshot)
+
+For assistance with the restoration process, contact Zerops support.
+
+## Use Cases
+
+Elasticsearch excels in:
+
+- **Full-text Search** - Powerful search capabilities with relevance scoring
+- **Log Analytics** - Centralize and analyze application logs
+- **Application Monitoring** - Track metrics and performance data
+- **Security Analytics** - Detect threats and analyze security events
+- **Business Analytics** - Search and analyze business data
+
+## Best Practices
+
+### Performance
+
+- Allocate sufficient heap memory for your workload
+- Use appropriate shard counts for your data volume
+- Monitor cluster health and resource usage
+- Implement index lifecycle management policies
+
+### Security
+
+- Store credentials in environment variables
+- Use internal connections when possible
+- Implement proper authentication in production
+- Regularly update to latest supported versions
+
+### Data Management
+
+- Plan index mappings before ingesting data
+- Use appropriate refresh intervals for your use case
+- Implement backup strategies for critical data
+- Monitor disk space and plan for growth
+
+## Related Resources
+
+- [Elasticsearch Official Documentation](https://www.elastic.co/guide/index.html)
+- [Available Elasticsearch Plugins](https://www.elastic.co/guide/en/elasticsearch/plugins/current/index.html)
+- [Elasticsearch Best Practices](https://www.elastic.co/guide/en/elasticsearch/reference/current/best-practices.html)
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)

@@ -1,0 +1,233 @@
+---
+title: Node.js Quickstart
+description: Deploy your first Node.js application on Zerops in minutes.
+---
+
+This quickstart guide will help you deploy a Node.js application on Zerops in just a few minutes.
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Node.js
+
+## Deploy Using a Recipe
+
+The fastest way to get started is using our pre-configured recipe:
+
+<Steps>
+  <Step title="Log in to Zerops">
+    Navigate to [app.zerops.io](https://app.zerops.io) and sign in or create a new account.
+  </Step>
+  
+  <Step title="Import the project">
+    Click on **Import a project** and paste the following YAML configuration:
+    
+    ```yaml
+    project:
+      name: my-nodejs-app
+      tags:
+        - nodejs
+        - quickstart
+    
+    services:
+      - hostname: app
+        type: nodejs@20
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-nodejs
+    
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+        priority: 1
+    ```
+    
+    This creates:
+    - A Node.js 20 service named "app"
+    - A PostgreSQL 16 database named "db"
+    - Automatic subdomain access for your app
+  </Step>
+  
+  <Step title="Wait for deployment">
+    Zerops will automatically:
+    1. Create the project and services
+    2. Clone the repository
+    3. Build the application
+    4. Deploy to production
+    
+    This usually takes 2-3 minutes.
+  </Step>
+  
+  <Step title="Access your application">
+    Once deployment is complete:
+    1. Find the subdomain URL in the **IP addresses & Public Routing** section
+    2. Click the URL to open your app (format: `https://app-xxx-3000.prg1.zerops.app`)
+    3. You should see "Hello, World!" or similar output
+  </Step>
+</Steps>
+
+## Deploy Your Own Application
+
+To deploy your own Node.js app:
+
+### 1. Create a Node.js Service
+
+<Tabs>
+  <Tab title="Using GUI">
+    1. Go to your project dashboard
+    2. Click **Add new service**
+    3. Select **Node.js**
+    4. Choose your version (18, 20, 22, or latest)
+    5. Set a hostname (e.g., "app")
+    6. Configure auto-scaling settings
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    Create a `description.yaml` file:
+    
+    ```yaml
+    project:
+      name: my-project
+    
+    services:
+      - hostname: app
+        type: nodejs@20
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    Then run:
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+</Tabs>
+
+### 2. Add zerops.yaml to Your Repository
+
+Create a `zerops.yaml` file in your repository root:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      cache: node_modules
+    
+    run:
+      base: nodejs@20
+      ports:
+        - port: 3000
+          httpSupport: true
+      start: npm start
+```
+
+### 3. Deploy Your Code
+
+<Tabs>
+  <Tab title="From Git">
+    In the Zerops GUI:
+    1. Go to your service
+    2. Click **Deploy**
+    3. Select **From Git**
+    4. Enter your repository URL
+    5. Click **Deploy**
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    ```bash
+    # Push your code from the current directory
+    zcli push
+    ```
+  </Tab>
+</Tabs>
+
+## Connect to a Database
+
+To connect your Node.js app to a PostgreSQL database:
+
+### 1. Add Database Service
+
+Add to your project import YAML:
+
+```yaml
+services:
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+### 2. Use Connection String
+
+Zerops automatically provides connection details via environment variables:
+
+```javascript
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  host: 'db',  // Service hostname
+  port: 5432,
+  database: 'db',
+  user: 'db',
+  password: process.env.DB_PASSWORD  // Auto-generated
+});
+
+// Use the connection
+const result = await pool.query('SELECT NOW()');
+console.log(result.rows[0]);
+```
+
+<Note>
+  Services in the same project share a private network. Simply use the service hostname (e.g., `db`) to connect.
+</Note>
+
+## Environment Variables
+
+Set environment variables in your service:
+
+<Tabs>
+  <Tab title="Using GUI">
+    1. Go to your service settings
+    2. Navigate to **Environment Variables**
+    3. Add your variables
+    4. Click **Save**
+  </Tab>
+  
+  <Tab title="In zerops.yaml">
+    ```yaml
+    zerops:
+      - setup: app
+        run:
+          envVariables:
+            NODE_ENV: production
+            API_KEY: ${api_key}  # Secret variable
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Build Pipeline" icon="code" href="/runtimes/nodejs/build-pipeline">
+    Customize your build process with advanced options.
+  </Card>
+  
+  <Card title="Setup Auto Scaling" icon="chart-line" href="/runtimes/nodejs/scaling">
+    Optimize resource usage with intelligent scaling.
+  </Card>
+  
+  <Card title="Deployment Process" icon="rocket" href="/runtimes/nodejs/deployment">
+    Learn about zero-downtime deployments.
+  </Card>
+  
+  <Card title="Browse Examples" icon="github" href="https://github.com/zeropsio?q=nodejs">
+    Explore more Node.js examples on GitHub.
+  </Card>
+</CardGroup>

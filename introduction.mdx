@@ -1,0 +1,164 @@
+---
+title: Introduction to Zerops
+description: A developer-first Platform-as-a-Service built on bare metal for the perfect mix of flexibility, scalability, and affordability
+---
+
+## What is Zerops?
+
+Zerops is a **developer-first Platform-as-a-Service** built entirely from scratch on bare metal infrastructure. It delivers the perfect balance of **developer experience**, **flexibility**, **scalability**, and **affordability**—making it an ideal choice for applications of any size, complexity, and traffic level.
+
+Unlike traditional cloud platforms that force you to choose between ease-of-use and power, Zerops gives you both. Deploy production-ready applications in minutes while maintaining full control over your infrastructure configuration.
+
+## Why Developers Choose Zerops
+
+<CardGroup cols={2}>
+  <Card title="Deploy in Minutes" icon="rocket">
+    Import your repository, add a `zerops.yaml` file, and deploy. No complex configuration or DevOps expertise required.
+  </Card>
+  <Card title="True Autoscaling" icon="chart-line">
+    Horizontal and vertical autoscaling with granular steps as small as 0.125 GB RAM and 1 CPU core. Scale from tiny to massive in minutes.
+  </Card>
+  <Card title="Production-Ready Infrastructure" icon="server">
+    Each project includes dedicated L3/L7 load balancers, automatic SSL certificates, firewall, logging, and statistics—all managed automatically.
+  </Card>
+  <Card title="Honest Pricing" icon="dollar-sign">
+    Pay only for hardware resources used. No hidden fees, no seat charges, no feature tiers. 3-5x cheaper than popular alternatives.
+  </Card>
+</CardGroup>
+
+## Core Features
+
+### Dedicated Infrastructure Per Project
+
+Zerops deploys custom dedicated infrastructure for each project, including:
+
+- **L3 balancer** with firewall and unique IP addresses
+- **Logger and Statistics** containers for comprehensive monitoring
+- **L7 load balancer** handling HTTP traffic, SSL termination, and certificate management
+- **Private network** created with VXLAN for secure service communication
+
+Services within your project communicate securely using internal hostnames and can reference each other's environment variables—no complex networking setup required.
+
+<Card title="Learn More" icon="book" href="/features/infrastructure">
+  Explore the complete project infrastructure architecture
+</Card>
+
+### Flexible Build & Deploy Pipeline
+
+Zerops uses full Linux OS containers (via Incus) providing the perfect middle ground between Docker containers and full VMs. You get:
+
+- Pre-prepared build and runtime images for popular technologies
+- Powerful, flexible pipeline to customize both build and runtime environments
+- Automatic builds via GitHub/GitLab integration or manual triggers via CLI
+- No Docker registries needed—built-in artifact management
+- Zero-downtime deployments with automatic rollback capabilities
+
+<Card title="Learn More" icon="book" href="/features/pipeline">
+  Discover how the build and deploy pipeline works
+</Card>
+
+### Intelligent Autoscaling
+
+Zerops provides fully automatic horizontal and vertical scaling:
+
+- **Vertical scaling**: Resources adjust from 0.25 GB RAM / 1 CPU core to 32 GB RAM / 10 CPU cores per container
+- **Horizontal scaling**: Add or remove containers automatically based on load (1-10 containers)
+- **Database HA modes**: Choose between single-container or highly-available multi-container setups
+- **Smart optimization**: Performance tuning happens automatically as services scale
+
+You'll never overprovision or underprovision resources again. Your services always have exactly what they need.
+
+<Card title="Learn More" icon="book" href="/features/scaling">
+  Learn about automatic scaling and high availability
+</Card>
+
+## Supported Technologies
+
+### Runtimes & Web Servers
+
+Zerops provides pre-configured build and runtime images for:
+
+<CardGroup cols={4}>
+  <Card title="Node.js" icon="node-js" href="/nodejs/overview" />
+  <Card title="PHP" icon="php" href="/php/overview" />
+  <Card title="Python" icon="python" href="/python/overview" />
+  <Card title="Go" icon="golang" href="/go/overview" />
+  <Card title=".NET" icon="microsoft" href="/dotnet/overview" />
+  <Card title="Rust" icon="rust" href="/rust/overview" />
+  <Card title="Java" icon="java" href="/java/overview" />
+  <Card title="Deno" icon="code" href="/deno/overview" />
+  <Card title="Bun" icon="code" href="/bun/overview" />
+  <Card title="Elixir" icon="code" href="/elixir/overview" />
+  <Card title="Gleam" icon="code" href="/gleam/overview" />
+  <Card title="Nginx" icon="server" href="/nginx/overview" />
+</CardGroup>
+
+### Databases & Services
+
+Fully managed databases, search engines, and message brokers in both single-container and highly-available modes:
+
+<CardGroup cols={3}>
+  <Card title="PostgreSQL" href="/postgresql/overview" />
+  <Card title="MariaDB" href="/mariadb/overview" />
+  <Card title="Valkey (Redis)" href="/valkey/overview" />
+  <Card title="Elasticsearch" href="/elasticsearch/overview" />
+  <Card title="KeyDB" href="/keydb/overview" />
+  <Card title="Kafka" href="/kafka/overview" />
+  <Card title="NATS" href="/nats/overview" />
+  <Card title="ClickHouse" href="/clickhouse/overview" />
+  <Card title="Qdrant" href="/qdrant/overview" />
+</CardGroup>
+
+### Containers & Storage
+
+- **Linux Containers**: Ubuntu, Alpine, and Docker support
+- **Object Storage**: S3-compatible storage on separate infrastructure
+- **Shared Storage**: Persistent disk mountable across multiple services
+
+## Pricing That Makes Sense
+
+Zerops charges only for hardware resources—CPU, RAM, and disk. That's it.
+
+- **No feature tiers**: All features unlocked for everyone
+- **No seat fees**: Add unlimited team members
+- **No surprises**: Simple, transparent pricing 3-5x cheaper than alternatives
+- **Fair usage**: Pay for what you actually use with granular resource billing
+
+Create unlimited development environments, give each developer their own stack, or spin up testing environments—all without worrying about hidden costs.
+
+<Card title="View Pricing" icon="dollar-sign" href="/company/pricing">
+  See detailed pricing information
+</Card>
+
+## Quick Links
+
+<CardGroup cols={3}>
+  <Card title="Quickstart Guide" icon="play" href="/quickstart">
+    Deploy your first app in under 5 minutes
+  </Card>
+  <Card title="zerops.yaml Reference" icon="file-code" href="/zerops-yaml/specification">
+    Complete configuration file documentation
+  </Card>
+  <Card title="CLI Documentation" icon="terminal" href="/references/cli">
+    Command-line interface for advanced workflows
+  </Card>
+  <Card title="Import YAML" icon="cloud-arrow-up" href="/references/import">
+    Create projects and services from templates
+  </Card>
+  <Card title="GitHub Recipes" icon="github" href="https://github.com/zeropsio">
+    Ready-to-deploy example applications
+  </Card>
+  <Card title="Discord Community" icon="discord" href="https://discord.com/invite/WDvCZ54">
+    Get help from the Zerops team and community
+  </Card>
+</CardGroup>
+
+## Ready to Get Started?
+
+The fastest way to experience Zerops is to deploy a real application. Our quickstart guide walks you through creating an account, importing a project, and deploying a Node.js app with PostgreSQL—all in under 5 minutes.
+
+<Card title="Start the Quickstart" icon="rocket" href="/quickstart" iconType="duotone">
+  Deploy your first application on Zerops now
+</Card>
+
+Or explore our GitHub recipes to find template applications in your preferred technology stack, ready to import and deploy with a single click.

@@ -1,0 +1,176 @@
+---
+title: Authentication
+description: Learn how to authenticate your requests to the Zerops REST API using Personal Access Tokens
+---
+
+The Zerops REST API uses Bearer token authentication to secure all API requests. You'll need to generate a Personal Access Token from the Zerops GUI and include it in your API requests.
+
+## Personal Access Tokens
+
+Personal Access Tokens allow you to securely access Zerops programmatically. You can create and manage multiple tokens for different applications or purposes.
+
+### Creating a Token
+
+1. Log in to the [Zerops GUI](https://app.zerops.io)
+2. Navigate to [Access Token management](https://app.zerops.io/settings/token-management)
+3. Click **"Generate a new access token"**
+4. Copy and securely store your token (it will only be shown once)
+
+<Warning>
+  Keep your access tokens secure and never commit them to version control. Treat them like passwords.
+</Warning>
+
+### Managing Tokens
+
+You can view and delete your access tokens at any time from the [Access Token management](https://app.zerops.io/settings/token-management) page. Deleting a token will immediately revoke its access.
+
+## Using Access Tokens
+
+Include your Personal Access Token in the `Authorization` header of your API requests using the Bearer authentication scheme:
+
+```bash
+Authorization: Bearer <your-token>
+```
+
+### Example Request
+
+Here's a complete example using cURL to authenticate and make a request:
+
+```bash
+curl -X GET \
+  https://api.app-prg1.zerops.io/api/rest/public/project \
+  -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### Example with Different Languages
+
+<CodeGroup>
+
+```javascript JavaScript
+const axios = require('axios');
+
+const token = 'YOUR_PERSONAL_ACCESS_TOKEN';
+const baseURL = 'https://api.app-prg1.zerops.io/api/rest/public';
+
+const client = axios.create({
+  baseURL,
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+// Make a request
+client.get('/project')
+  .then(response => console.log(response.data))
+  .catch(error => console.error(error));
+```
+
+```python Python
+import requests
+
+token = 'YOUR_PERSONAL_ACCESS_TOKEN'
+base_url = 'https://api.app-prg1.zerops.io/api/rest/public'
+
+headers = {
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+}
+
+# Make a request
+response = requests.get(f'{base_url}/project', headers=headers)
+print(response.json())
+```
+
+```go Go
+package main
+
+import (
+    "fmt"
+    "net/http"
+    "io/ioutil"
+)
+
+func main() {
+    token := "YOUR_PERSONAL_ACCESS_TOKEN"
+    baseURL := "https://api.app-prg1.zerops.io/api/rest/public"
+    
+    client := &http.Client{}
+    req, _ := http.NewRequest("GET", baseURL+"/project", nil)
+    req.Header.Add("Authorization", "Bearer "+token)
+    req.Header.Add("Content-Type", "application/json")
+    
+    resp, err := client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+    
+    body, _ := ioutil.ReadAll(resp.Body)
+    fmt.Println(string(body))
+}
+```
+
+```php PHP
+<?php
+
+$token = 'YOUR_PERSONAL_ACCESS_TOKEN';
+$baseURL = 'https://api.app-prg1.zerops.io/api/rest/public';
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $baseURL . '/project');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token,
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+echo $response;
+?>
+```
+
+</CodeGroup>
+
+## Authentication Errors
+
+If authentication fails, you'll receive one of the following error responses:
+
+<ResponseField name="401 Unauthorized" type="error">
+  The token is missing, invalid, or has been revoked. Check that you're including the correct token in the Authorization header.
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="error">
+  The token is valid but doesn't have permission to access the requested resource.
+</ResponseField>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store tokens securely">
+    - Use environment variables or secure vault services
+    - Never hardcode tokens in your source code
+    - Don't commit tokens to version control
+  </Accordion>
+  
+  <Accordion title="Rotate tokens regularly">
+    - Create new tokens periodically
+    - Delete old or unused tokens
+    - Use different tokens for different applications
+  </Accordion>
+  
+  <Accordion title="Monitor token usage">
+    - Track which applications use which tokens
+    - Immediately revoke tokens if compromised
+    - Review active tokens regularly
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Explore API Endpoints" icon="code" href="/api/endpoints">
+  Now that you know how to authenticate, explore the available API endpoints
+</Card>

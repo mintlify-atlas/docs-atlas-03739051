@@ -1,0 +1,83 @@
+---
+title: .NET Quickstart
+description: Deploy your first .NET application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- .NET SDK installed locally
+
+## Deploy from Recipe
+
+<Steps>
+  <Step title="Import">
+    Log in to [Zerops GUI](https://app.zerops.io).
+  </Step>
+  
+  <Step title="Configuration">
+    ```yaml
+    project:
+      name: my-first-dotnet-app
+    services:
+      - hostname: app
+        type: dotnet@8
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-dotnet-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    Click **Import project**.
+  </Step>
+</Steps>
+
+## Create Your Application
+
+```bash
+dotnet new webapi -n MyApi
+cd MyApi
+```
+
+### Add zerops.yaml
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: app
+    build:
+      base: dotnet@8
+      buildCommands:
+        - dotnet restore
+        - dotnet publish -c Release -o out
+      deployFiles:
+        - out
+      cache: ~/.nuget/packages
+    
+    run:
+      start: dotnet out/MyApi.dll
+      ports:
+        - port: 5000
+          httpSupport: true
+      envVariables:
+        ASPNETCORE_URLS: http://+:5000
+        ASPNETCORE_ENVIRONMENT: Production
+```
+
+## Deploy
+
+```bash
+zcli service deploy
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/dotnet/overview">
+    Learn about .NET runtime
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+</CardGroup>

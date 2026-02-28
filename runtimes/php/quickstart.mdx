@@ -1,0 +1,313 @@
+---
+title: PHP Quickstart
+description: Deploy your first PHP application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of PHP
+
+## Deploy from Recipe
+
+The fastest way to get started is to deploy our ready-made PHP example:
+
+<Steps>
+  <Step title="Import the Project">
+    Log in to [Zerops GUI](https://app.zerops.io) and click **Import a project**.
+  </Step>
+  
+  <Step title="Paste the Configuration">
+    Use this YAML configuration:
+    
+    ```yaml
+    project:
+      name: my-first-php-app
+    services:
+      - hostname: app
+        type: php-apache@8.3
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-php-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Wait for Deployment">
+    Click **Import project** and wait for the build and deployment to complete.
+  </Step>
+  
+  <Step title="Access Your App">
+    Once deployed, find your subdomain URL in the **IP Addresses & Public Routing Overview**.
+    
+    It will look like: `https://app-{project-id}-8080.prg1.zerops.app`
+    
+    Visit the URL to see "Hello, World!"
+  </Step>
+</Steps>
+
+## Deploy Your Own PHP Application
+
+### Step 1: Add zerops.yaml
+
+Create a `zerops.yaml` file in your repository root:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: php-apache@8.3
+      buildCommands:
+        - composer install --optimize-autoloader --no-dev
+      deployFiles:
+        - vendor
+        - public
+        - src
+      cache: vendor
+    
+    run:
+      base: php-apache@8.3
+      documentRoot: public
+```
+
+### Step 2: Configure Your Service
+
+Create a service using Zerops CLI or GUI:
+
+<Tabs>
+  <Tab title="Using zCLI">
+    Create a `description.yaml`:
+    
+    ```yaml
+    project:
+      name: my-php-app
+    services:
+      - hostname: app
+        type: php-apache@8.3
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    Import the project:
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+  
+  <Tab title="Using GUI">
+    1. Go to your project dashboard
+    2. Click **Add new service**
+    3. Select **PHP** runtime
+    4. Choose version: **8.3**
+    5. Select web server: **Apache** or **Nginx**
+    6. Set hostname: `app`
+    7. Configure auto-scaling (optional)
+    8. Click **Create service**
+  </Tab>
+</Tabs>
+
+### Step 3: Deploy Your Code
+
+<Tabs>
+  <Tab title="From Git">
+    Connect your GitHub repository in the Zerops GUI:
+    
+    1. Go to your service detail
+    2. Click **Build & Deploy Pipeline**
+    3. Select **GitHub** or **GitLab**
+    4. Choose your repository and branch
+    5. Click **Deploy**
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    Deploy from your local machine:
+    
+    ```bash
+    zcli service deploy --projectId=<project-id> --serviceId=<service-id>
+    ```
+  </Tab>
+</Tabs>
+
+## Common Configurations
+
+### Laravel Application
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: php-nginx@8.3
+      buildCommands:
+        - composer install --optimize-autoloader --no-dev
+        - php artisan config:cache
+        - php artisan route:cache
+        - php artisan view:cache
+      deployFiles:
+        - vendor
+        - bootstrap
+        - public
+        - resources
+        - routes
+        - storage
+        - app
+        - config
+        - artisan
+      cache: vendor
+    
+    run:
+      base: php-nginx@8.3
+      documentRoot: public
+      initCommands:
+        - php artisan migrate --force
+```
+
+### WordPress Site
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: php-apache@8.1
+      buildCommands:
+        - composer install
+      deployFiles: .
+    
+    run:
+      base: php-apache@8.1
+      documentRoot: .
+      envVariables:
+        PHP_INI_upload_max_filesize: 20M
+        PHP_INI_post_max_size: 20M
+```
+
+### Custom PHP API
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: php-nginx@8.3
+      buildCommands:
+        - composer install --no-dev
+      deployFiles:
+        - vendor
+        - src
+        - public/index.php
+    
+    run:
+      base: php-nginx@8.3
+      documentRoot: public
+      ports:
+        - port: 8080
+          httpSupport: true
+```
+
+## Adding a Database
+
+Extend your `description.yaml` to include a database:
+
+```yaml
+project:
+  name: my-php-app
+services:
+  - hostname: app
+    type: php-nginx@8.3
+    minContainers: 1
+    maxContainers: 6
+  
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+Connect to the database using the hostname:
+
+```php
+$host = 'db';
+$dbname = getenv('DB_NAME');
+$user = getenv('DB_USER');
+$password = getenv('DB_PASSWORD');
+
+$dsn = "pgsql:host=$host;dbname=$dbname";
+$pdo = new PDO($dsn, $user, $password);
+```
+
+## Environment Variables
+
+Set environment variables in `zerops.yaml`:
+
+```yaml
+run:
+  envVariables:
+    APP_ENV: production
+    APP_DEBUG: false
+```
+
+Or add secret variables through the Zerops GUI:
+
+1. Go to service detail
+2. Click **Environment Variables**
+3. Add your secrets (database passwords, API keys, etc.)
+
+## Customize PHP Configuration
+
+Adjust PHP settings via environment variables:
+
+```yaml
+run:
+  envVariables:
+    PHP_INI_memory_limit: 256M
+    PHP_INI_max_execution_time: 60
+    PHP_INI_post_max_size: 20M
+    PHP_FPM_PM_MAX_CHILDREN: 30
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with Composer errors">
+    Make sure your `composer.json` and `composer.lock` are committed to your repository.
+    
+    Try running with verbose output:
+    ```yaml
+    buildCommands:
+      - composer install --verbose
+    ```
+  </Accordion>
+  
+  <Accordion title="404 errors on all pages">
+    Check your `documentRoot` setting. For Laravel/Symfony, it should be:
+    ```yaml
+    run:
+      documentRoot: public
+    ```
+  </Accordion>
+  
+  <Accordion title="PHP version mismatch">
+    Ensure your `build.base` and `run.base` use the same PHP version:
+    ```yaml
+    build:
+      base: php-nginx@8.3
+    run:
+      base: php-nginx@8.3
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/php/overview">
+    Learn about PHP runtime features
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/references/environment-variables">
+    Manage secrets and configuration
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+  <Card title="Custom Domains" icon="globe" href="/features/routing">
+    Add your own domain
+  </Card>
+</CardGroup>

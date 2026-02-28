@@ -1,0 +1,195 @@
+---
+title: PHP Runtime
+description: Deploy and scale PHP applications on Zerops with built-in Apache or Nginx web servers.
+---
+
+## What is PHP on Zerops?
+
+Zerops provides a fully managed PHP runtime environment with integrated web servers (Apache or Nginx), automatic scaling, and zero-config deployment. Build and deploy your PHP applications with enterprise-grade performance and reliability.
+
+<Info>
+PHP is a popular general-purpose scripting language especially suited to web development. [Learn more about PHP →](https://www.php.net/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Dual Web Server Support" icon="server">
+    Choose between PHP+Apache or PHP+Nginx configurations optimized for your use case
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on actual resource usage
+  </Card>
+  <Card title="PHP-FPM Optimization" icon="gauge-high">
+    Configurable FastCGI Process Manager for optimal performance
+  </Card>
+  <Card title="Composer Integration" icon="box">
+    Built-in Composer support for seamless dependency management
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+Zerops supports multiple PHP versions:
+
+- PHP 8.3 (Latest)
+- PHP 8.2
+- PHP 8.1
+- PHP 8.0
+- PHP 7.4
+
+<Note>
+You can change the major version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Web Server Options
+
+### PHP + Apache
+
+Ideal for traditional PHP applications with .htaccess support:
+
+```yaml
+services:
+  - hostname: app
+    type: php-apache@8.3
+```
+
+### PHP + Nginx
+
+Optimized for high-performance applications:
+
+```yaml
+services:
+  - hostname: app
+    type: php-nginx@8.3
+```
+
+## Quick Example
+
+Deploy a simple PHP application in minutes:
+
+```yaml
+project:
+  name: my-php-app
+services:
+  - hostname: app
+    type: php-apache@8.3
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-php-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The PHP runtime environment includes:
+
+- Alpine Linux (default) or Ubuntu
+- Selected PHP version
+- Composer for dependency management
+- Git and wget utilities
+- Zerops CLI tools
+- Configurable PHP-FPM
+
+## PHP-FPM Configuration
+
+Customize PHP-FPM process management:
+
+### Dynamic Mode (Default)
+
+```yaml
+run:
+  envVariables:
+    PHP_FPM_PM: dynamic
+    PHP_FPM_PM_MAX_CHILDREN: 20
+    PHP_FPM_PM_START_SERVERS: 2
+    PHP_FPM_PM_MIN_SPARE_SERVERS: 1
+    PHP_FPM_PM_MAX_SPARE_SERVERS: 3
+```
+
+### OnDemand Mode
+
+Optimal for lower traffic applications:
+
+```yaml
+run:
+  envVariables:
+    PHP_FPM_PM: ondemand
+    PHP_FPM_PM_MAX_CHILDREN: 20
+    PHP_FPM_PM_PROCESS_IDLE_TIMEOUT: 60s
+```
+
+## PHP.ini Customization
+
+Override PHP configuration through environment variables:
+
+```yaml
+run:
+  envVariables:
+    PHP_INI_post_max_size: 10M
+    PHP_INI_upload_max_filesize: 10M
+    PHP_INI_memory_limit: 256M
+```
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Laravel Applications">
+    Perfect for Laravel apps with optimized Composer workflows and PHP-FPM configurations.
+  </Accordion>
+  
+  <Accordion title="WordPress Sites">
+    Run WordPress with Apache for .htaccess support and automatic scaling.
+  </Accordion>
+  
+  <Accordion title="Symfony Projects">
+    Deploy Symfony applications with custom build processes and caching.
+  </Accordion>
+  
+  <Accordion title="Custom PHP APIs">
+    Build RESTful APIs with Nginx for maximum performance.
+  </Accordion>
+</AccordionGroup>
+
+## Common Configuration
+
+### Custom Document Root
+
+Set a custom web server root:
+
+```yaml
+run:
+  documentRoot: public
+```
+
+### Custom Web Server Config
+
+Provide custom Nginx or Apache configuration:
+
+```yaml
+run:
+  siteConfigPath: config/nginx.conf
+```
+
+### Install System Packages
+
+Add required dependencies:
+
+```yaml
+run:
+  os: ubuntu
+  prepareCommands:
+    - sudo apt-get install -y imagemagick
+    - sudo apt-get install -y ffmpeg
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/php/quickstart">
+    Deploy your first PHP application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-php-hello-world">
+    Explore PHP examples on GitHub
+  </Card>
+</CardGroup>

@@ -1,0 +1,329 @@
+---
+title: Python Runtime
+description: Deploy and scale Python applications on Zerops with automatic dependency management and flexible configuration.
+---
+
+## What is Python on Zerops?
+
+Zerops provides a fully managed Python runtime environment with automatic scaling, built-in dependency management, and zero-config deployment. Build and deploy Python web applications, APIs, and services with enterprise-grade performance.
+
+<Info>
+Python is a programming language that lets you work quickly and integrate systems more effectively. [Learn more about Python →](https://www.python.org/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Multiple Python Versions" icon="code">
+    Support for Python 3.8 through 3.12 with easy version switching
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on actual resource usage
+  </Card>
+  <Card title="PIP Integration" icon="box">
+    Built-in pip support for seamless dependency management
+  </Card>
+  <Card title="Virtual Environments" icon="layer-group">
+    Automatic virtual environment management for isolated dependencies
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+Zerops supports multiple Python versions:
+
+- Python 3.12 (Latest)
+- Python 3.11
+- Python 3.10
+- Python 3.9
+- Python 3.8
+
+<Note>
+You can change the major version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Quick Example
+
+Deploy a Python application in minutes:
+
+```yaml
+project:
+  name: my-python-app
+services:
+  - hostname: app
+    type: python@3.12
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-python-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The Python runtime environment includes:
+
+- Alpine Linux (default) or Ubuntu
+- Selected Python version
+- pip for dependency management
+- Git and wget utilities
+- Zerops CLI tools
+- Virtual environment support
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="FastAPI Applications">
+    Deploy high-performance FastAPI apps with automatic dependency installation and uvicorn server.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: python@3.12
+          buildCommands:
+            - pip install -r requirements.txt
+          deployFiles:
+            - app
+            - requirements.txt
+        run:
+          start: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ```
+  </Accordion>
+  
+  <Accordion title="Django Projects">
+    Run Django applications with database migrations and static file collection.
+    
+    ```yaml
+    zerops:
+      - setup: web
+        build:
+          base: python@3.11
+          buildCommands:
+            - pip install -r requirements.txt
+            - python manage.py collectstatic --noinput
+          deployFiles: .
+        run:
+          initCommands:
+            - python manage.py migrate
+          start: gunicorn myproject.wsgi:application --bind 0.0.0.0:8000
+    ```
+  </Accordion>
+  
+  <Accordion title="Flask APIs">
+    Build RESTful APIs with Flask and custom dependencies.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: python@3.12
+          buildCommands:
+            - pip install -r requirements.txt
+          deployFiles:
+            - app
+            - requirements.txt
+        run:
+          start: flask run --host=0.0.0.0 --port=5000
+    ```
+  </Accordion>
+  
+  <Accordion title="Machine Learning Services">
+    Deploy ML models with custom system dependencies.
+    
+    ```yaml
+    zerops:
+      - setup: ml-api
+        build:
+          base: python@3.11
+          os: ubuntu
+          prepareCommands:
+            - sudo apt-get update
+            - sudo apt-get install -y python3-opencv
+          buildCommands:
+            - pip install -r requirements.txt
+          deployFiles: .
+        run:
+          start: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Process
+
+### Standard Build
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: python@3.12
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app
+        - requirements.txt
+      cache: ~/.cache/pip
+```
+
+### With System Dependencies
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: python@3.12
+      os: ubuntu
+      prepareCommands:
+        - sudo apt-get update
+        - sudo apt-get install -y build-essential
+        - sudo apt-get install -y libpq-dev
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app
+        - requirements.txt
+```
+
+## Runtime Configuration
+
+### Custom Start Command
+
+Specify how to start your application:
+
+```yaml
+run:
+  start: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### With Init Commands
+
+Run migrations or initialization tasks:
+
+```yaml
+run:
+  initCommands:
+    - python manage.py migrate
+    - python manage.py createcachetable
+  start: gunicorn app.wsgi:application --bind 0.0.0.0:8000
+```
+
+### Multiple Workers
+
+Configure Gunicorn with multiple workers:
+
+```yaml
+run:
+  start: gunicorn app.wsgi:application --workers 4 --bind 0.0.0.0:8000
+```
+
+## Environment Variables
+
+Set runtime configuration:
+
+```yaml
+run:
+  envVariables:
+    DJANGO_SETTINGS_MODULE: myproject.settings.production
+    DEBUG: false
+    PYTHONUNBUFFERED: 1
+```
+
+## Custom System Packages
+
+Install additional system packages:
+
+```yaml
+run:
+  os: ubuntu
+  prepareCommands:
+    - sudo apt-get update
+    - sudo apt-get install -y imagemagick
+    - sudo apt-get install -y ffmpeg
+    - sudo apt-get install -y postgresql-client
+```
+
+## Port Configuration
+
+Define custom ports:
+
+```yaml
+run:
+  ports:
+    - port: 8000
+      protocol: TCP
+      httpSupport: true
+```
+
+## Health Checks
+
+Configure health checks for your application:
+
+```yaml
+run:
+  healthCheck:
+    httpGet:
+      port: 8000
+      path: /health
+```
+
+## Common Patterns
+
+### requirements.txt
+
+Manage dependencies:
+
+```txt
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.0
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+```
+
+### With Poetry
+
+Use Poetry for dependency management:
+
+```yaml
+build:
+  buildCommands:
+    - pip install poetry
+    - poetry config virtualenvs.create false
+    - poetry install --no-dev
+  deployFiles:
+    - app
+    - pyproject.toml
+    - poetry.lock
+```
+
+### Async Workers
+
+Run async tasks with Celery:
+
+```yaml
+services:
+  # Web server
+  - hostname: web
+    type: python@3.12
+    # ...
+  
+  # Celery worker
+  - hostname: worker
+    type: python@3.12
+    # ...
+  
+  # Redis for Celery
+  - hostname: redis
+    type: redis@7
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/python/quickstart">
+    Deploy your first Python application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-python-hello-world">
+    Explore Python examples on GitHub
+  </Card>
+</CardGroup>

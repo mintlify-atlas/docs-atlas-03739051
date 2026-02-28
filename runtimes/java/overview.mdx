@@ -1,0 +1,293 @@
+---
+title: Java Runtime
+description: Deploy and scale Java applications on Zerops with automatic compilation and enterprise-grade performance.
+---
+
+## What is Java on Zerops?
+
+Zerops provides a fully managed Java runtime environment with automatic compilation, built-in Maven/Gradle support, and zero-config deployment. Build and deploy enterprise Java applications with reliability and performance.
+
+<Info>
+Java is a high-level, class-based, object-oriented programming language designed to have as few implementation dependencies as possible. [Learn more about Java →](https://www.java.com/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Multiple Java Versions" icon="code">
+    Support for Java 8, 11, 17, and 21 LTS versions
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on resource usage
+  </Card>
+  <Card title="Build Tool Support" icon="box">
+    Built-in Maven and Gradle support for dependency management
+  </Card>
+  <Card title="JVM Optimization" icon="gauge-high">
+    Configurable JVM parameters for optimal performance
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+- Java 21 (Latest LTS)
+- Java 17 (LTS)
+- Java 11 (LTS)
+- Java 8 (Legacy LTS)
+
+<Note>
+You can change the Java version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Quick Example
+
+```yaml
+project:
+  name: my-java-app
+services:
+  - hostname: app
+    type: java@21
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-java-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The Java runtime includes:
+
+- Alpine Linux or Ubuntu
+- OpenJDK (selected version)
+- Maven and Gradle
+- Git utilities
+- Zerops CLI tools
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Spring Boot Applications">
+    Deploy Spring Boot microservices and web applications.
+    
+    ```yaml
+    zerops:
+      - setup: app
+        build:
+          base: java@21
+          buildCommands:
+            - mvn clean package -DskipTests
+          deployFiles:
+            - target/*.jar
+        run:
+          start: java -jar target/app.jar
+    ```
+  </Accordion>
+  
+  <Accordion title="Jakarta EE Applications">
+    Run Jakarta EE applications on application servers.
+    
+    ```yaml
+    zerops:
+      - setup: webapp
+        build:
+          base: java@17
+          buildCommands:
+            - mvn clean package
+          deployFiles:
+            - target/*.war
+        run:
+          start: java -jar target/app.war
+    ```
+  </Accordion>
+  
+  <Accordion title="Microservices with Quarkus">
+    Deploy cloud-native Java with Quarkus.
+    
+    ```yaml
+    zerops:
+      - setup: service
+        build:
+          base: java@21
+          buildCommands:
+            - ./mvnw package -Pnative
+          deployFiles:
+            - target/*-runner
+        run:
+          start: ./target/app-runner
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Process
+
+### Maven Build
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: java@21
+      buildCommands:
+        - mvn clean install -DskipTests
+      deployFiles:
+        - target/*.jar
+      cache: ~/.m2/repository
+```
+
+### Gradle Build
+
+```yaml
+build:
+  base: java@21
+  buildCommands:
+    - gradle build -x test
+  deployFiles:
+    - build/libs/*.jar
+  cache: ~/.gradle/caches
+```
+
+## Runtime Configuration
+
+### Standard JAR Execution
+
+```yaml
+run:
+  start: java -jar app.jar
+  ports:
+    - port: 8080
+      httpSupport: true
+```
+
+### With JVM Options
+
+```yaml
+run:
+  start: java -Xmx512m -Xms256m -jar app.jar
+  envVariables:
+    JAVA_OPTS: "-Xmx512m -Xms256m"
+```
+
+### Spring Boot Application
+
+```yaml
+run:
+  start: java -jar app.jar --server.port=8080
+  envVariables:
+    SPRING_PROFILES_ACTIVE: production
+```
+
+## JVM Optimization
+
+### Memory Configuration
+
+```yaml
+run:
+  start: java -Xmx1g -Xms512m -XX:MaxMetaspaceSize=256m -jar app.jar
+```
+
+### Garbage Collection
+
+```yaml
+run:
+  start: java -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -jar app.jar
+```
+
+### Container-Aware JVM
+
+```yaml
+run:
+  start: java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar
+```
+
+## Framework Examples
+
+### Spring Boot
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: java@21
+      buildCommands:
+        - mvn clean package -DskipTests
+      deployFiles:
+        - target/*.jar
+    run:
+      start: java -jar target/api-0.0.1-SNAPSHOT.jar
+      envVariables:
+        SPRING_PROFILES_ACTIVE: production
+```
+
+### Quarkus
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: java@21
+      buildCommands:
+        - ./mvnw package -Dquarkus.package.type=uber-jar
+      deployFiles:
+        - target/*-runner.jar
+    run:
+      start: java -jar target/app-runner.jar
+```
+
+### Micronaut
+
+```yaml
+zerops:
+  - setup: service
+    build:
+      base: java@21
+      buildCommands:
+        - ./gradlew build -x test
+      deployFiles:
+        - build/libs/*-all.jar
+    run:
+      start: java -jar build/libs/app-all.jar
+```
+
+## Database Integration
+
+### PostgreSQL with JDBC
+
+```java
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+public class Database {
+    public static Connection getConnection() throws Exception {
+        String url = String.format(
+            "jdbc:postgresql://db:5432/%s",
+            System.getenv("DB_NAME")
+        );
+        return DriverManager.getConnection(
+            url,
+            System.getenv("DB_USER"),
+            System.getenv("DB_PASSWORD")
+        );
+    }
+}
+```
+
+### Spring Data JPA
+
+```yaml
+run:
+  envVariables:
+    SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+    SPRING_DATASOURCE_USERNAME: ${DB_USER}
+    SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/java/quickstart">
+    Deploy your first Java application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-java-hello-world">
+    Explore Java examples on GitHub
+  </Card>
+</CardGroup>

@@ -1,0 +1,83 @@
+---
+title: Elixir Runtime
+description: Deploy and scale Elixir applications on Zerops with BEAM VM and OTP support.
+---
+
+## What is Elixir on Zerops?
+
+Zerops provides a fully managed Elixir runtime environment with the BEAM VM, Mix build tool, and OTP support. Build and deploy Phoenix applications, APIs, and distributed systems with fault tolerance and scalability.
+
+<Info>
+Elixir is a dynamic, functional language designed for building scalable and maintainable applications. [Learn more about Elixir →](https://elixir-lang.org/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="BEAM VM" icon="microchip">
+    Run on the battle-tested Erlang VM
+  </Card>
+  <Card title="OTP Support" icon="shield">
+    Built-in fault tolerance and supervision trees
+  </Card>
+  <Card title="Mix Integration" icon="box">
+    Complete Mix and Hex package support
+  </Card>
+  <Card title="Hot Code Reloading" icon="bolt">
+    Deploy updates without downtime
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+- Elixir 1.16 (Latest)
+- Elixir 1.15
+- Elixir 1.14
+
+## Quick Example
+
+```yaml
+project:
+  name: my-elixir-app
+services:
+  - hostname: api
+    type: elixir@1.16
+    minContainers: 1
+    buildFromGit: https://github.com/zeropsio/recipe-elixir@main
+    enableSubdomainAccess: true
+```
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Phoenix Web Applications">
+    ```yaml
+    zerops:
+      - setup: web
+        build:
+          base: elixir@1.16
+          buildCommands:
+            - mix deps.get
+            - mix compile
+            - mix assets.deploy
+          deployFiles: .
+        run:
+          start: mix phx.server
+    ```
+  </Accordion>
+  
+  <Accordion title="Real-time APIs">
+    Build WebSocket and real-time applications with Phoenix Channels.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/runtimes/elixir/quickstart">
+    Deploy your first Elixir app
+  </Card>
+  <Card title="Examples" icon="github" href="https://github.com/zeropsio/recipe-elixir">
+    View Elixir examples
+  </Card>
+</CardGroup>

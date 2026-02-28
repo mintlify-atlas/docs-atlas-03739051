@@ -1,0 +1,329 @@
+---
+title: Installation
+description: Install zCLI on Linux, macOS, Windows, or using package managers like npm and yarn
+---
+
+zCLI is available for all major operating systems and can be installed using various methods. Choose the installation method that works best for your environment.
+
+## System Requirements
+
+zCLI supports the following platforms:
+
+- **Linux** - x86 and x64 architectures
+- **macOS** - x86-64 and ARM64 (Apple Silicon)
+- **Windows** - x64 architecture
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Linux/macOS">
+    ### Quick Install Script
+    
+    The easiest way to install zCLI on Linux or macOS is using the installation script:
+    
+    ```bash
+    curl -L https://zerops.io/zcli/install.sh | sh
+    ```
+    
+    This script will:
+    - Download the latest version of zCLI
+    - Install it to `/usr/bin` or `/usr/local/bin`
+    - Make it executable and ready to use
+    
+    ### Verify Installation
+    
+    After installation, verify that zCLI is working:
+    
+    ```bash
+    zcli version
+    ```
+    
+    <Note>
+      You may need to restart your terminal or run `source ~/.bashrc` (or your shell's equivalent) for the `zcli` command to be available.
+    </Note>
+  </Tab>
+  
+  <Tab title="Windows">
+    ### PowerShell Installation
+    
+    Install zCLI on Windows using PowerShell:
+    
+    ```powershell
+    irm https://zerops.io/zcli/install.ps1 | iex
+    ```
+    
+    This script will:
+    - Download the latest version of zCLI
+    - Install it to `C:\Program Files\` or `C:\Program Files (x86)\`
+    - Add it to your PATH
+    
+    ### Verify Installation
+    
+    After installation, verify that zCLI is working:
+    
+    ```powershell
+    zcli version
+    ```
+    
+    <Note>
+      You may need to restart your PowerShell session or terminal for the `zcli` command to be available.
+    </Note>
+  </Tab>
+  
+  <Tab title="npm/yarn">
+    ### Using npm
+    
+    Install zCLI globally using npm:
+    
+    ```bash
+    npm i -g @zerops/zcli
+    ```
+    
+    ### Using yarn
+    
+    Install zCLI globally using yarn:
+    
+    ```bash
+    yarn global add @zerops/zcli
+    ```
+    
+    ### Verify Installation
+    
+    After installation, verify that zCLI is working:
+    
+    ```bash
+    zcli version
+    ```
+    
+    <Tip>
+      This method is great for developers who already have Node.js installed and prefer managing CLI tools through npm/yarn.
+    </Tip>
+  </Tab>
+  
+  <Tab title="Manual">
+    ### Download from GitHub
+    
+    You can manually download zCLI from the GitHub releases page:
+    
+    1. Visit the [zCLI releases page](https://github.com/zeropsio/zcli/releases)
+    2. Download the latest release for your platform
+    3. Extract the archive
+    4. Move the binary to a location in your PATH
+    
+    #### Linux/macOS
+    
+    ```bash
+    # Extract and move to /usr/local/bin
+    tar -xzf zcli-*.tar.gz
+    sudo mv zcli /usr/local/bin/
+    sudo chmod +x /usr/local/bin/zcli
+    ```
+    
+    #### Windows
+    
+    1. Extract the ZIP file
+    2. Move `zcli.exe` to a directory in your PATH (e.g., `C:\Program Files\zcli\`)
+    3. Add the directory to your system PATH if needed
+    
+    ### Verify Installation
+    
+    After installation, verify that zCLI is working:
+    
+    ```bash
+    zcli version
+    ```
+  </Tab>
+  
+  <Tab title="NixOS">
+    ### Building from Source
+    
+    For NixOS users, you can build zCLI from source:
+    
+    <Steps>
+      <Step title="Enable Nix Features">
+        Make sure `nix-command` and flakes are enabled. You can also use the flag:
+        
+        ```bash
+        --extra-experimental-features 'nix-command flakes'
+        ```
+      </Step>
+      
+      <Step title="Clone Repository">
+        Clone the zCLI repository:
+        
+        ```bash
+        git clone https://github.com/zeropsio/zcli
+        cd zcli
+        ```
+      </Step>
+      
+      <Step title="Enter Development Shell">
+        ```bash
+        nix develop
+        ```
+      </Step>
+      
+      <Step title="Build">
+        ```bash
+        nix build
+        ```
+      </Step>
+      
+      <Step title="Access Binary">
+        You can find the zCLI binary inside `result/bin`:
+        
+        ```bash
+        ./result/bin/zcli version
+        ```
+      </Step>
+    </Steps>
+    
+    ### Install to System
+    
+    To install to your system PATH:
+    
+    ```bash
+    nix profile install
+    ```
+  </Tab>
+</Tabs>
+
+## Post-Installation
+
+### Authentication
+
+After installing zCLI, you need to authenticate with your Zerops account:
+
+<Steps>
+  <Step title="Get Your Access Token">
+    1. Log in to the [Zerops GUI](https://app.zerops.io)
+    2. Navigate to [Access Token management](https://app.zerops.io/settings/token-management)
+    3. Click "Generate a new access token"
+    4. Copy the generated token
+  </Step>
+  
+  <Step title="Log in with zCLI">
+    Use the token to log in:
+    
+    ```bash
+    zcli login <your-token>
+    ```
+    
+    <Success>
+      You're now authenticated and ready to use zCLI!
+    </Success>
+  </Step>
+</Steps>
+
+### Shell Completion (Optional)
+
+Enable shell autocompletion for a better experience:
+
+<CodeGroup>
+
+```bash Bash
+zcli completion bash > ~/.zerops-completion.bash
+echo 'source ~/.zerops-completion.bash' >> ~/.bashrc
+source ~/.bashrc
+```
+
+```bash Zsh
+zcli completion zsh > ~/.zerops-completion.zsh
+echo 'source ~/.zerops-completion.zsh' >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash Fish
+zcli completion fish > ~/.config/fish/completions/zcli.fish
+```
+
+```powershell PowerShell
+zcli completion powershell | Out-File -FilePath $PROFILE -Append
+```
+
+</CodeGroup>
+
+## Updating zCLI
+
+### Using Installation Scripts
+
+Run the same installation command to update to the latest version:
+
+<CodeGroup>
+
+```bash Linux/macOS
+curl -L https://zerops.io/zcli/install.sh | sh
+```
+
+```powershell Windows
+irm https://zerops.io/zcli/install.ps1 | iex
+```
+
+</CodeGroup>
+
+### Using Package Managers
+
+<CodeGroup>
+
+```bash npm
+npm update -g @zerops/zcli
+```
+
+```bash yarn
+yarn global upgrade @zerops/zcli
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found after installation">
+    If you get a "command not found" error after installation:
+    
+    1. **Restart your terminal** - This ensures your PATH is refreshed
+    2. **Check your PATH** - Make sure the installation directory is in your PATH:
+       ```bash
+       echo $PATH  # Linux/macOS
+       echo $env:PATH  # Windows PowerShell
+       ```
+    3. **Manual PATH addition** - Add the installation directory to your PATH if needed
+  </Accordion>
+  
+  <Accordion title="Permission denied on Linux/macOS">
+    If you encounter permission errors:
+    
+    1. **Use sudo** - The installation script may need elevated privileges
+    2. **Check ownership** - Ensure you have write permissions to the installation directory
+    3. **Use user directory** - Consider installing to `~/.local/bin` instead
+  </Accordion>
+  
+  <Accordion title="Windows execution policy error">
+    If PowerShell blocks the installation script:
+    
+    ```powershell
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+    ```
+    
+    Then run the installation command again.
+  </Accordion>
+  
+  <Accordion title="Network/download issues">
+    If the installation fails due to network issues:
+    
+    1. **Check your connection** - Ensure you can access GitHub and zerops.io
+    2. **Use manual installation** - Download from GitHub releases directly
+    3. **Use npm/yarn** - Try installing via package managers instead
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Commands Reference" icon="book" href="/cli/commands">
+    Explore all available zCLI commands
+  </Card>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Learn how to configure zCLI for your workflow
+  </Card>
+</CardGroup>

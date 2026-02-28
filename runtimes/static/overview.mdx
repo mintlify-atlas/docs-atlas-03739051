@@ -1,0 +1,285 @@
+---
+title: Static Service
+description: Simplified static hosting on Zerops with intelligent routing, CORS support, and built-in SEO optimization through an abstracted Nginx configuration.
+---
+
+The Static service provides a streamlined way to serve static content on Zerops. Built on Nginx but with a simplified configuration interface, it abstracts away complexity while maintaining the flexibility needed for modern web applications.
+
+## Key Features
+
+### Simplified Configuration
+Instead of writing Nginx configuration directly, use YAML-based routing rules that are automatically translated into optimized Nginx configs. Focus on what your app needs, not how to configure a web server.
+
+### Smart Default Routing
+Out of the box, the Static service handles common patterns for modern web applications:
+1. Try exact path (`/about` → `/about`)
+2. Try with HTML extension (`/about` → `/about.html`)
+3. Try directory index (`/docs` → `/docs/index.html`)
+4. Fall back to SPA routing (`/app/route` → `/index.html`)
+5. Return 404 if nothing matches
+
+<Info>
+  Single Page Applications work without any configuration. The automatic fallback to `/index.html` ensures client-side routing works correctly.
+</Info>
+
+### Advanced Routing Features
+- **Masked redirects**: Show content from another URL while keeping the original URL
+- **Wildcard patterns**: Handle multiple routes with a single rule
+- **Domain management**: Redirect between multiple domains
+- **Path preservation**: Keep paths when redirecting
+- **Query preservation**: Maintain query parameters across redirects
+
+### Built-in CORS Support
+Enable CORS with a single configuration line. No need to understand Nginx's `add_header` directives.
+
+### Custom Headers
+Add security headers, cache control, or any custom headers with simple YAML configuration.
+
+### SEO Optimization
+Integrated [Prerender.io](https://prerender.io) support ensures search engines, social media crawlers, and AI tools can properly index your content.
+
+## When to Use Static Service
+
+### Perfect For:
+- **Single Page Applications** (React, Vue, Angular, Svelte)
+- **Static site generators** (Gatsby, Next.js static export, Nuxt static)
+- **Documentation sites** (Docusaurus, VitePress, MkDocs)
+- **Landing pages** and marketing sites
+- **Simple static websites**
+
+### Consider Full Nginx If:
+- You need complete control over Nginx configuration
+- You have complex server-side logic requirements
+- You need custom Nginx modules
+- You want to use advanced Nginx features not exposed by the Static service
+
+<Tip>
+  You can always switch from Static to full Nginx later. Zerops provides a migration tool that converts your Static configuration to a full Nginx config you can use as a starting point.
+</Tip>
+
+## Basic Configuration
+
+Minimal `zerops.yaml` for a static service:
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+```
+
+This simple configuration gives you:
+- Optimized Nginx server
+- SPA-friendly routing
+- Alpine Linux base
+- Automatic scaling
+
+## Routing Configuration
+
+### Simple Redirects
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      routing:
+        redirects:
+          # Permanent redirect
+          - from: /old-page
+            to: /new-page
+            status: 301
+          
+          # Masked redirect (shows /about content but keeps URL)
+          - from: /about
+            to: /about-us
+```
+
+### Domain Management
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      routing:
+        redirects:
+          # Redirect entire domain
+          - from: https://old-domain.com/*
+            to: https://new-domain.com
+            status: 301
+            preserveQuery: true
+          
+          # Campaign-specific domain
+          - from: https://promo.example.com/*
+            to: https://example.com/campaign
+            status: 302
+```
+
+### CORS Configuration
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      routing:
+        # Simple CORS (allows all origins)
+        cors: "*"
+        
+        # Or with Nginx syntax
+        cors: "'*' always"
+```
+
+### Custom Headers
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      routing:
+        headers:
+          - for: "/"
+            values:
+              X-Frame-Options: "'DENY'"
+              X-Content-Type-Options: "'nosniff' always"
+              Content-Security-Policy: '"default-src ''self''" always'
+```
+
+<Warning>
+  Header values are inserted directly into Nginx configuration. Always include proper quotes:
+  - Simple values: `"'DENY'"`
+  - Values with internal quotes: `'"default-src ''self''"`'
+  - With 'always' directive: `"'value' always"`
+</Warning>
+
+## Framework Integration
+
+The Static service works with any framework that generates static files:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles:
+        - dist/~  # Your framework's output directory
+    run:
+      base: static
+```
+
+**Popular frameworks:**
+- **React**: Deploy `build/` or `dist/`
+- **Vue**: Deploy `dist/`
+- **Angular**: Deploy `dist/<project-name>/`
+- **Svelte**: Deploy `build/` or `dist/`
+- **Next.js**: Deploy `.next/` (static export)
+- **Nuxt**: Deploy `.output/public/`
+- **Gatsby**: Deploy `public/`
+
+## SEO with Prerender
+
+Enable Prerender.io to make your SPA SEO-friendly:
+
+1. Set the `PRERENDER_TOKEN` secret variable in Zerops GUI
+2. Optionally configure custom host:
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      envVariables:
+        PRERENDER_HOST: your.prerender.host
+```
+
+<Info>
+  Prerender automatically detects crawlers (including AI tools like ChatGPT, Perplexity, and Claude) and serves them pre-rendered HTML while users get the full interactive experience.
+</Info>
+
+## Migration to Full Nginx
+
+If you need more control, you can migrate to a full Nginx service:
+
+1. Go to your Static service in Zerops GUI
+2. Click the three dots (⋮) in the left panel
+3. Select **Need to switch to full Nginx service?**
+4. Copy the generated Nginx configuration
+5. Use it as a starting point for a full Nginx service
+
+This preserves your routing logic and gives you complete control over Nginx configuration.
+
+## Comparison: Static vs Nginx
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Static Service</th>
+      <th>Full Nginx</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Configuration</td>
+      <td>YAML-based, simplified</td>
+      <td>Full Nginx config files</td>
+    </tr>
+    <tr>
+      <td>SPA Support</td>
+      <td>Built-in, no config needed</td>
+      <td>Manual configuration required</td>
+    </tr>
+    <tr>
+      <td>Redirects</td>
+      <td>Simple YAML rules</td>
+      <td>Nginx rewrite directives</td>
+    </tr>
+    <tr>
+      <td>CORS</td>
+      <td>One-line configuration</td>
+      <td>Manual header configuration</td>
+    </tr>
+    <tr>
+      <td>Custom Headers</td>
+      <td>YAML configuration</td>
+      <td>Nginx add_header directives</td>
+    </tr>
+    <tr>
+      <td>Prerender.io</td>
+      <td>Built-in support</td>
+      <td>Manual configuration</td>
+    </tr>
+    <tr>
+      <td>Flexibility</td>
+      <td>Limited to exposed features</td>
+      <td>Complete control</td>
+    </tr>
+    <tr>
+      <td>Learning Curve</td>
+      <td>Low</td>
+      <td>Requires Nginx knowledge</td>
+    </tr>
+  </tbody>
+</table>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/runtimes/static/quickstart">
+    Deploy your first static site
+  </Card>
+  <Card title="Routing Guide" icon="route" href="/runtimes/static/routing">
+    Learn advanced routing patterns
+  </Card>
+  <Card title="SEO Optimization" icon="magnifying-glass" href="/runtimes/static/seo">
+    Set up Prerender.io
+  </Card>
+  <Card title="Framework Examples" icon="code" href="/runtimes/static/frameworks">
+    See framework-specific examples
+  </Card>
+</CardGroup>

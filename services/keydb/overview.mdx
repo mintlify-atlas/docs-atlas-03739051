@@ -1,0 +1,101 @@
+---
+title: KeyDB
+description: Fast, multithreaded Redis-compatible database with enhanced performance capabilities.
+---
+
+[KeyDB](https://docs.keydb.dev/) is a fully open source database, a faster drop-in alternative to Redis. It offers enhanced performance, multithreading capabilities, and maintains full compatibility with Redis clients and APIs.
+
+<Warning>
+While KeyDB is available in Zerops, please note that KeyDB development has not been very active recently. For new Redis-compatible deployments, we recommend considering [Valkey](/services/valkey/overview) as the preferred alternative due to its active development and ongoing support.
+</Warning>
+
+## Getting Started
+
+### Creating a KeyDB Service
+
+You can create a KeyDB service using:
+
+1. **Zerops GUI** - Through the web interface when adding a new service to your project
+2. **zCLI** - Using the command-line interface
+3. **Import** - Via a YAML configuration file
+
+### Example Configuration
+
+```yaml
+services:
+  - hostname: keydb
+    type: keydb@6
+    mode: NON_HA
+```
+
+For HA (High Availability) deployments:
+
+```yaml
+services:
+  - hostname: keydb
+    type: keydb@6
+    mode: HA
+```
+
+## Connection Methods
+
+### Connect from Same Project
+
+Services within the same Zerops project can connect to KeyDB using internal DNS:
+
+```bash
+redis://keydb:6379
+```
+
+### Connect Remotely
+
+For remote connections, use [Zerops VPN](/references/networking/vpn) to securely access your KeyDB instance.
+
+## Managing Your Database
+
+KeyDB provides a Redis-compatible interface for all database operations. You can:
+
+- Use any Redis client library
+- Execute Redis commands directly
+- Manage keys and data structures
+- Monitor performance metrics
+
+### Using Redis CLI
+
+Connect via VPN and use the Redis CLI:
+
+```bash
+redis-cli -h keydb -p 6379
+```
+
+## Use Cases
+
+KeyDB is suitable for:
+
+- **High-performance caching** - Leverage multithreading for improved throughput
+- **Session storage** - Fast read/write access for user sessions
+- **Real-time analytics** - Track metrics and counters
+- **Message queues** - Pub/sub patterns for event distribution
+- **Rate limiting** - API request throttling
+
+## Popular Guides
+
+- [zCLI](/references/cli) - Get even more out of Zerops with the command-line tool
+- [Zerops VPN](/references/networking/vpn) - Connect to your KeyDB service securely
+- [Environment Variables](/features/env-variables) - Configure your application connections
+
+## Migration to Valkey
+
+If you're considering migrating from KeyDB to Valkey:
+
+1. Both are Redis-compatible, so client code requires minimal changes
+2. Export your data using Redis dump/restore commands
+3. Create a new Valkey service in Zerops
+4. Import your data to the new service
+5. Update your application connection strings
+
+For migration assistance, contact our support team.
+
+## Support
+
+Need help? Join our [Discord community](https://discord.gg/zeropsio) for support from our team and other members.

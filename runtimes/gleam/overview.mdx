@@ -1,0 +1,83 @@
+---
+title: Gleam Runtime
+description: Deploy and scale Gleam applications on Zerops with type-safe functional programming.
+---
+
+## What is Gleam on Zerops?
+
+Zerops provides a fully managed Gleam runtime environment with the BEAM VM, enabling you to build type-safe, fault-tolerant applications with functional programming.
+
+<Info>
+Gleam is a friendly language for building type-safe systems that scale. [Learn more about Gleam →](https://gleam.run/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Type Safety" icon="shield-check">
+    Strong static typing with type inference
+  </Card>
+  <Card title="BEAM VM" icon="microchip">
+    Runs on the Erlang VM for reliability
+  </Card>
+  <Card title="Fast Builds" icon="bolt">
+    Quick compilation and deployment
+  </Card>
+  <Card title="OTP Compatible" icon="network-wired">
+    Use Erlang/OTP libraries and patterns
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+- Gleam 1.5 (Latest)
+- Gleam 1.4
+
+## Quick Example
+
+```yaml
+project:
+  name: my-gleam-app
+services:
+  - hostname: api
+    type: gleam@1.5
+    minContainers: 1
+    buildFromGit: https://github.com/zeropsio/recipe-gleam@main
+    enableSubdomainAccess: true
+```
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Web APIs">
+    Build type-safe web APIs with Gleam.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: gleam@1.5
+          buildCommands:
+            - gleam build
+          deployFiles:
+            - build
+        run:
+          start: gleam run
+    ```
+  </Accordion>
+  
+  <Accordion title="Distributed Systems">
+    Create fault-tolerant distributed applications.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/runtimes/gleam/quickstart">
+    Deploy your first Gleam app
+  </Card>
+  <Card title="Examples" icon="github" href="https://github.com/zeropsio/recipe-gleam">
+    View Gleam examples
+  </Card>
+</CardGroup>

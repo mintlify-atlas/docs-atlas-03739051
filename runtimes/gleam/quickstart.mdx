@@ -1,0 +1,60 @@
+---
+title: Gleam Quickstart
+description: Deploy your first Gleam application on Zerops.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Gleam installed locally
+
+## Deploy from Recipe
+
+<Steps>
+  <Step title="Import Project">
+    ```yaml
+    project:
+      name: recipe-gleam
+    services:
+      - hostname: api
+        type: gleam@1.5
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-gleam
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+    ```
+  </Step>
+</Steps>
+
+## Create Gleam App
+
+```bash
+gleam new myapp
+cd myapp
+```
+
+### Add zerops.yaml
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: gleam@1.5
+      buildCommands:
+        - gleam build
+      deployFiles:
+        - build
+    run:
+      start: gleam run
+      ports:
+        - port: 3000
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="book" href="/runtimes/gleam/overview">
+    Runtime features
+  </Card>
+</CardGroup>

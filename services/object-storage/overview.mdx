@@ -1,0 +1,288 @@
+---
+title: Object Storage
+description: S3-compatible object storage powered by MinIO for large-scale data storage and retrieval.
+---
+
+Zerops Object Storage is powered by [MinIO](https://min.io/), a high-performance, open-source S3-compatible object store. MinIO is built for large-scale AI/ML, data lake, and database workloads.
+
+## What is Object Storage?
+
+Object Storage is ideal for storing and retrieving large amounts of unstructured data such as:
+
+- **Media Files** - Images, videos, audio files
+- **Backups** - Application and database backups
+- **Static Assets** - Website assets, downloadable files
+- **Data Lakes** - Large datasets for analytics and ML
+- **Document Storage** - PDFs, spreadsheets, documents
+- **Application Data** - User uploads, generated files
+
+## Key Features
+
+### S3 Compatibility
+
+Object Storage is fully compatible with Amazon S3 API, allowing you to:
+
+- Use existing S3 client libraries and tools
+- Migrate from AWS S3 with minimal code changes
+- Leverage the extensive S3 ecosystem
+
+### High Performance
+
+- Optimized for high-throughput workloads
+- Built for concurrent access from multiple services
+- Efficient handling of large files and datasets
+
+### Scalability
+
+- Store unlimited amounts of data
+- Pay only for what you use
+- Automatically scales to meet demand
+
+## Getting Started
+
+### Creating Object Storage
+
+Create your first storage bucket:
+
+1. **Via Zerops GUI** - Navigate to your project and add Object Storage service
+2. **Via Import** - Use YAML configuration to define buckets
+
+### Example Configuration
+
+```yaml
+services:
+  - hostname: storage
+    type: object-storage
+    objectStorageSize: 10  # Size in GB
+    objectStorageBuckets:
+      - name: media-files
+      - name: backups
+```
+
+## Access Configuration
+
+### Access Details
+
+Your Object Storage service provides:
+
+- **Endpoint URL** - S3-compatible endpoint for API access
+- **Access Key** - Credential for authentication
+- **Secret Key** - Secret for authentication
+- **Bucket Names** - Created bucket identifiers
+
+You can find these details in the Zerops GUI under your Object Storage service's **Access Details** section.
+
+### Environment Variables
+
+Access credentials are automatically available as environment variables:
+
+```bash
+${storage_accessKeyId}     # Access key
+${storage_secretAccessKey} # Secret key
+${storage_endpoint}        # Endpoint URL
+${storage_bucketName}      # Bucket name (for first bucket)
+```
+
+## Usage Examples
+
+### Node.js with AWS SDK
+
+```javascript
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+
+const s3Client = new S3Client({
+  endpoint: process.env.storage_endpoint,
+  region: 'us-east-1', // Required but not used by MinIO
+  credentials: {
+    accessKeyId: process.env.storage_accessKeyId,
+    secretAccessKey: process.env.storage_secretAccessKey
+  },
+  forcePathStyle: true // Required for MinIO
+});
+
+// Upload a file
+await s3Client.send(new PutObjectCommand({
+  Bucket: process.env.storage_bucketName,
+  Key: 'uploads/image.jpg',
+  Body: fileBuffer,
+  ContentType: 'image/jpeg'
+}));
+
+// Download a file
+const response = await s3Client.send(new GetObjectCommand({
+  Bucket: process.env.storage_bucketName,
+  Key: 'uploads/image.jpg'
+}));
+```
+
+### Python with boto3
+
+```python
+import boto3
+import os
+
+s3_client = boto3.client(
+    's3',
+    endpoint_url=os.environ['storage_endpoint'],
+    aws_access_key_id=os.environ['storage_accessKeyId'],
+    aws_secret_access_key=os.environ['storage_secretAccessKey']
+)
+
+# Upload a file
+with open('image.jpg', 'rb') as f:
+    s3_client.upload_fileobj(
+        f,
+        os.environ['storage_bucketName'],
+        'uploads/image.jpg'
+    )
+
+# Download a file
+s3_client.download_file(
+    os.environ['storage_bucketName'],
+    'uploads/image.jpg',
+    'downloaded_image.jpg'
+)
+```
+
+### Go with AWS SDK
+
+```go
+import (
+    "github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/credentials"
+    "github.com/aws/aws-sdk-go/aws/session"
+    "github.com/aws/aws-sdk-go/service/s3"
+)
+
+sess, _ := session.NewSession(&aws.Config{
+    Endpoint:         aws.String(os.Getenv("storage_endpoint")),
+    Region:           aws.String("us-east-1"),
+    Credentials:      credentials.NewStaticCredentials(
+        os.Getenv("storage_accessKeyId"),
+        os.Getenv("storage_secretAccessKey"),
+        "",
+    ),
+    S3ForcePathStyle: aws.Bool(true),
+})
+
+svc := s3.New(sess)
+
+// Upload a file
+_, err := svc.PutObject(&s3.PutObjectInput{
+    Bucket: aws.String(os.Getenv("storage_bucketName")),
+    Key:    aws.String("uploads/image.jpg"),
+    Body:   bytes.NewReader(fileBytes),
+})
+```
+
+## Managing Buckets
+
+### Creating Buckets
+
+Buckets can be created:
+
+1. **During Service Creation** - Define buckets in your import YAML
+2. **Via MinIO Client** - Use `mc` CLI tool via Zerops VPN
+3. **Via S3 API** - Programmatically create buckets
+
+### Bucket Policies
+
+Configure access policies for your buckets:
+
+- **Private** - Only authenticated requests allowed (default)
+- **Public Read** - Allow anonymous downloads
+- **Custom Policies** - Fine-grained access control via S3 bucket policies
+
+## Best Practices
+
+### Performance
+
+- Use multipart uploads for files larger than 100MB
+- Implement parallel uploads/downloads for large files
+- Use appropriate chunk sizes for streaming
+- Cache frequently accessed objects
+
+### Security
+
+- Never expose access keys in client-side code
+- Use presigned URLs for temporary access
+- Implement bucket policies for access control
+- Rotate access keys periodically
+- Use HTTPS for all requests
+
+### Cost Optimization
+
+- Set appropriate lifecycle policies for old data
+- Compress files before uploading when possible
+- Monitor storage usage regularly
+- Delete unused objects and buckets
+
+### Organization
+
+- Use clear, hierarchical key naming (e.g., `uploads/2024/01/file.jpg`)
+- Separate different types of data into different buckets
+- Use metadata for better object organization
+- Implement versioning for critical data
+
+## Common Use Cases
+
+### User File Uploads
+
+```javascript
+// Generate presigned URL for direct upload
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const uploadUrl = await getSignedUrl(
+  s3Client,
+  new PutObjectCommand({
+    Bucket: process.env.storage_bucketName,
+    Key: `uploads/${userId}/${filename}`,
+    ContentType: 'image/jpeg'
+  }),
+  { expiresIn: 3600 } // URL valid for 1 hour
+);
+
+// Return URL to client for direct upload
+return { uploadUrl };
+```
+
+### Static Asset Serving
+
+```javascript
+// Generate presigned URL for download
+const downloadUrl = await getSignedUrl(
+  s3Client,
+  new GetObjectCommand({
+    Bucket: process.env.storage_bucketName,
+    Key: 'assets/logo.png'
+  }),
+  { expiresIn: 86400 } // URL valid for 24 hours
+);
+```
+
+### Backup Storage
+
+```javascript
+// Upload database backup
+const timestamp = new Date().toISOString();
+await s3Client.send(new PutObjectCommand({
+  Bucket: 'backups',
+  Key: `database/backup-${timestamp}.sql.gz`,
+  Body: backupStream,
+  StorageClass: 'STANDARD'
+}));
+```
+
+## Popular Guides
+
+- [zCLI](/references/cli) - Command-line tool for managing Zerops services
+- [Zerops VPN](/references/networking/vpn) - Securely access your Object Storage
+- [Environment Variables](/features/env-variables) - Configure your application
+
+## Support
+
+Need help with Object Storage?
+
+- Join our [Discord community](https://discord.com/invite/WDvCZ54) - Get help from our team and other members
+- Check the MinIO documentation for advanced features
+- Share your knowledge and help others in the community

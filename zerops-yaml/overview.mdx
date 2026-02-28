@@ -1,0 +1,271 @@
+---
+title: Zerops.yaml Overview
+description: Learn how to configure your application build and deployment pipeline using zerops.yaml
+---
+
+The `zerops.yaml` file is the core configuration file that defines how Zerops should build and deploy your application. This file must be placed in the **root of your repository** and is essential for automating your application's build and deployment pipeline.
+
+## What is zerops.yaml?
+
+The `zerops.yaml` file provides a declarative way to configure:
+- Build environment and dependencies
+- Build commands and processes
+- Deployment files and caching
+- Runtime environment setup
+- Health checks and readiness probes
+- Environment variables
+- Port configurations
+- Cron jobs
+- And much more
+
+## Basic Structure
+
+A `zerops.yaml` file follows this basic structure:
+
+```yaml
+zerops:
+  - setup: app
+    # optional
+    build: ...
+    # optional
+    deploy: ...
+    # required
+    run: ...
+```
+
+Each service configuration consists of four main sections:
+
+### 1. Setup Section (Required)
+
+The `setup` section specifies which service in your Zerops project this configuration applies to:
+
+```yaml
+setup: app
+```
+
+The value must match an existing service hostname in your Zerops project.
+
+### 2. Build Section (Optional)
+
+The `build` section defines how your application should be built:
+
+```yaml
+build:
+  base: nodejs@latest
+  buildCommands:
+    - npm install
+    - npm run build
+  deployFiles: ./dist
+  cache: node_modules
+```
+
+Key features:
+- Choose base technology and version
+- Install dependencies with `prepareCommands`
+- Run build processes with `buildCommands`
+- Specify which files to deploy with `deployFiles`
+- Cache directories for faster subsequent builds
+
+### 3. Deploy Section (Optional)
+
+The `deploy` section controls deployment behavior:
+
+```yaml
+deploy:
+  temporaryShutdown: false
+  readinessCheck:
+    httpGet:
+      port: 80
+      path: /health
+    failureTimeout: 60
+```
+
+Key features:
+- Control container replacement order
+- Define readiness checks to verify deployment success
+- Configure deployment timeouts
+
+### 4. Run Section (Required)
+
+The `run` section defines how your application should run in production:
+
+```yaml
+run:
+  base: nodejs@latest
+  start: npm start
+  ports:
+    - port: 3000
+      httpSupport: true
+  envVariables:
+    NODE_ENV: production
+  healthCheck:
+    httpGet:
+      port: 3000
+      path: /health
+```
+
+Key features:
+- Define startup commands
+- Configure ports and protocols
+- Set environment variables
+- Define health checks
+- Run initialization commands
+- Schedule cron jobs
+
+## Multi-Service Configuration
+
+For monorepos or projects with multiple services, you can define multiple service configurations in a single `zerops.yaml`:
+
+```yaml
+zerops:
+  - setup: frontend
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles: ./dist
+    run:
+      base: static@latest
+      
+  - setup: api
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles: ./
+    run:
+      start: node server.js
+      ports:
+        - port: 8080
+          httpSupport: true
+```
+
+## Configuration Inheritance with extends
+
+Use the `extends` feature to create reusable base configurations:
+
+```yaml
+zerops:
+  - setup: base
+    build:
+      buildCommands:
+        - npm run build
+      deployFiles: ./dist
+    run:
+      start: npm start
+
+  - setup: prod
+    extends: base
+    run:
+      envVariables:
+        NODE_ENV: production
+
+  - setup: dev
+    extends: base
+    run:
+      envVariables:
+        NODE_ENV: development
+```
+
+This keeps your configuration DRY (Don't Repeat Yourself) while allowing environment-specific customizations.
+
+## Parameter Availability
+
+<Note>
+Not all parameters are available for every service type. Most parameters work across different runtime services, but some are specific to certain service types:
+- `documentRoot` and `siteConfigPath` - webserver services only
+- `routing` - Static services only
+- `healthCheck` - runtime services only
+</Note>
+
+## Quick Start Guide
+
+1. **Create the file**: Add `zerops.yaml` to your repository root
+2. **Define your service**: Set the `setup` value to match your service hostname
+3. **Configure build** (optional): Define how to build your application
+4. **Configure runtime**: Define how to run your application
+5. **Commit and push**: Zerops will automatically use this configuration
+
+## Example Configurations
+
+### Node.js Application
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      cache: node_modules
+    run:
+      start: node dist/index.js
+      ports:
+        - port: 3000
+          httpSupport: true
+      envVariables:
+        NODE_ENV: production
+```
+
+### PHP Application
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: php@8.3
+      buildCommands:
+        - composer install --no-dev
+      deployFiles: ./
+    run:
+      base: php-nginx@8.3
+      documentRoot: public
+      ports:
+        - port: 80
+          httpSupport: true
+```
+
+### Python Application
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: python@3.11
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles: ./
+    run:
+      start: python main.py
+      ports:
+        - port: 8080
+          httpSupport: true
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Full Specification" icon="book" href="/zerops-yaml/specification">
+    Explore all available parameters and configuration options
+  </Card>
+  <Card title="Base Technologies" icon="layer-group" href="/zerops-yaml/base-list">
+    View supported runtime and build technologies
+  </Card>
+  <Card title="Cron Jobs" icon="clock" href="/zerops-yaml/cron">
+    Learn how to schedule automated tasks
+  </Card>
+  <Card title="Build Pipeline" icon="gear" href="/features/pipeline">
+    Understand the complete build and deploy pipeline
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+Join our [Discord community](https://discord.gg/zeropsio) for support and questions.

@@ -1,0 +1,384 @@
+---
+title: Python Quickstart
+description: Deploy your first Python application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Python
+
+## Deploy from Recipe
+
+The fastest way to get started is to deploy our ready-made Python example:
+
+<Steps>
+  <Step title="Import the Project">
+    Log in to [Zerops GUI](https://app.zerops.io) and click **Import a project**.
+  </Step>
+  
+  <Step title="Paste the Configuration">
+    Use this YAML configuration:
+    
+    ```yaml
+    project:
+      name: my-first-python-app
+    services:
+      - hostname: app
+        type: python@3.12
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-python-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Wait for Deployment">
+    Click **Import project** and wait for the build and deployment to complete.
+  </Step>
+  
+  <Step title="Access Your App">
+    Once deployed, find your subdomain URL in the **IP Addresses & Public Routing Overview**.
+    
+    It will look like: `https://app-{project-id}-8080.prg1.zerops.app`
+    
+    Visit the URL to see "Hello, World!"
+  </Step>
+</Steps>
+
+## Deploy Your Own Python Application
+
+### Step 1: Add zerops.yaml
+
+Create a `zerops.yaml` file in your repository root:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: python@3.12
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app
+        - requirements.txt
+      cache: ~/.cache/pip
+    
+    run:
+      base: python@3.12
+      start: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - port: 8000
+          httpSupport: true
+```
+
+### Step 2: Create requirements.txt
+
+List your dependencies:
+
+```txt
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.0
+```
+
+### Step 3: Configure Your Service
+
+<Tabs>
+  <Tab title="Using zCLI">
+    Create a `description.yaml`:
+    
+    ```yaml
+    project:
+      name: my-python-app
+    services:
+      - hostname: app
+        type: python@3.12
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    Import the project:
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+  
+  <Tab title="Using GUI">
+    1. Go to your project dashboard
+    2. Click **Add new service**
+    3. Select **Python** runtime
+    4. Choose version: **3.12**
+    5. Set hostname: `app`
+    6. Configure auto-scaling (optional)
+    7. Click **Create service**
+  </Tab>
+</Tabs>
+
+### Step 4: Deploy Your Code
+
+Connect your repository and deploy:
+
+```bash
+zcli service deploy
+```
+
+## Framework Examples
+
+### FastAPI Application
+
+Create a simple FastAPI app:
+
+```python title="app/main.py"
+from fastapi import FastAPI
+import os
+
+app = FastAPI()
+
+@app.get("/")
+async def root():
+    return {"message": "Hello from FastAPI on Zerops!"}
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+```
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: api
+    build:
+      base: python@3.12
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app
+        - requirements.txt
+    
+    run:
+      start: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - port: 8000
+          httpSupport: true
+```
+
+### Django Application
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: web
+    build:
+      base: python@3.11
+      buildCommands:
+        - pip install -r requirements.txt
+        - python manage.py collectstatic --noinput
+      deployFiles: .
+      cache: ~/.cache/pip
+    
+    run:
+      initCommands:
+        - python manage.py migrate --noinput
+      start: gunicorn myproject.wsgi:application --bind 0.0.0.0:8000 --workers 4
+      envVariables:
+        DJANGO_SETTINGS_MODULE: myproject.settings.production
+        DEBUG: false
+```
+
+### Flask Application
+
+```python title="app.py"
+from flask import Flask
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return {'message': 'Hello from Flask on Zerops!'}
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+```
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: app
+    build:
+      base: python@3.12
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app.py
+        - requirements.txt
+    
+    run:
+      start: flask run --host=0.0.0.0 --port=5000
+      envVariables:
+        FLASK_APP: app.py
+        FLASK_ENV: production
+```
+
+## Adding a Database
+
+Extend your project with PostgreSQL:
+
+```yaml title="description.yaml"
+project:
+  name: my-python-app
+services:
+  - hostname: app
+    type: python@3.12
+    minContainers: 1
+    maxContainers: 6
+  
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+Connect to the database:
+
+```python
+import os
+import psycopg2
+
+conn = psycopg2.connect(
+    host="db",
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD")
+)
+```
+
+Or with SQLAlchemy:
+
+```python
+from sqlalchemy import create_engine
+import os
+
+DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@db/{os.getenv('DB_NAME')}"
+engine = create_engine(DATABASE_URL)
+```
+
+## Environment Variables
+
+Set environment variables in `zerops.yaml`:
+
+```yaml
+run:
+  envVariables:
+    APP_ENV: production
+    DEBUG: false
+    LOG_LEVEL: info
+```
+
+Access in Python:
+
+```python
+import os
+
+app_env = os.getenv('APP_ENV', 'development')
+debug = os.getenv('DEBUG', 'false').lower() == 'true'
+```
+
+## Installing System Dependencies
+
+For packages requiring system libraries:
+
+```yaml
+build:
+  base: python@3.12
+  os: ubuntu
+  prepareCommands:
+    - sudo apt-get update
+    - sudo apt-get install -y build-essential
+    - sudo apt-get install -y libpq-dev
+    - sudo apt-get install -y python3-opencv
+  buildCommands:
+    - pip install -r requirements.txt
+```
+
+## Using Poetry
+
+If you prefer Poetry for dependency management:
+
+```yaml
+build:
+  base: python@3.12
+  buildCommands:
+    - pip install poetry
+    - poetry config virtualenvs.create false
+    - poetry install --no-dev --no-root
+  deployFiles:
+    - app
+    - pyproject.toml
+    - poetry.lock
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with pip errors">
+    Make sure your `requirements.txt` is properly formatted and all packages are available on PyPI.
+    
+    Try installing with verbose output:
+    ```yaml
+    buildCommands:
+      - pip install -r requirements.txt --verbose
+    ```
+  </Accordion>
+  
+  <Accordion title="Application doesn't start">
+    Check your start command and ensure the port matches:
+    
+    ```yaml
+    run:
+      start: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - port: 8000
+    ```
+  </Accordion>
+  
+  <Accordion title="Module not found errors">
+    Ensure all dependencies are in `requirements.txt` and the build completes successfully:
+    
+    ```yaml
+    build:
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - app
+        - requirements.txt  # Don't forget this!
+    ```
+  </Accordion>
+  
+  <Accordion title="Import errors in runtime">
+    Make sure you're deploying the correct files:
+    
+    ```yaml
+    build:
+      deployFiles:
+        - app           # Your application code
+        - requirements.txt
+        - config        # Additional directories if needed
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/python/overview">
+    Learn about Python runtime features
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/references/environment-variables">
+    Manage secrets and configuration
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+  <Card title="Monitoring" icon="chart-bar" href="/features/monitoring">
+    Monitor your application
+  </Card>
+</CardGroup>

@@ -1,0 +1,245 @@
+---
+title: Java Quickstart
+description: Deploy your first Java application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Java
+- Java and Maven/Gradle installed locally
+
+## Deploy from Recipe
+
+<Steps>
+  <Step title="Import the Project">
+    Log in to [Zerops GUI](https://app.zerops.io) and click **Import a project**.
+  </Step>
+  
+  <Step title="Paste the Configuration">
+    ```yaml
+    project:
+      name: my-first-java-app
+    services:
+      - hostname: app
+        type: java@21
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-java-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    Click **Import project** and wait for compilation.
+  </Step>
+  
+  <Step title="Access">
+    Visit your subdomain URL.
+  </Step>
+</Steps>
+
+## Deploy Your Own Application
+
+### Step 1: Create Spring Boot Application
+
+Create a simple REST API:
+
+```java title="src/main/java/com/example/demo/DemoApplication.java"
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@SpringBootApplication
+@RestController
+public class DemoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @GetMapping("/")
+    public Map<String, String> hello() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Hello from Java on Zerops!");
+        return response;
+    }
+
+    @GetMapping("/health")
+    public Map<String, String> health() {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "healthy");
+        return response;
+    }
+}
+```
+
+### Step 2: Add zerops.yaml
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: app
+    build:
+      base: java@21
+      buildCommands:
+        - mvn clean package -DskipTests
+      deployFiles:
+        - target/*.jar
+      cache: ~/.m2/repository
+    
+    run:
+      start: java -jar target/demo-0.0.1-SNAPSHOT.jar
+      ports:
+        - port: 8080
+          httpSupport: true
+      envVariables:
+        SPRING_PROFILES_ACTIVE: production
+```
+
+### Step 3: Configure Service
+
+<Tabs>
+  <Tab title="Using zCLI">
+    ```yaml title="description.yaml"
+    project:
+      name: my-java-app
+    services:
+      - hostname: app
+        type: java@21
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+  
+  <Tab title="Using GUI">
+    1. Create new service
+    2. Select **Java**
+    3. Choose version **21**
+    4. Set hostname: `app`
+  </Tab>
+</Tabs>
+
+## Framework Examples
+
+### Spring Boot with Gradle
+
+```kotlin title="build.gradle.kts"
+plugins {
+    java
+    id("org.springframework.boot") version "3.2.0"
+    id("io.spring.dependency-management") version "1.1.4"
+}
+
+group = "com.example"
+version = "0.0.1-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+```
+
+```yaml title="zerops.yaml"
+build:
+  buildCommands:
+    - gradle build -x test
+  deployFiles:
+    - build/libs/*.jar
+  cache: ~/.gradle/caches
+run:
+  start: java -jar build/libs/demo-0.0.1-SNAPSHOT.jar
+```
+
+### Quarkus Application
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: api
+    build:
+      base: java@21
+      buildCommands:
+        - ./mvnw package -Dquarkus.package.type=uber-jar
+      deployFiles:
+        - target/quarkus-app/*.jar
+    run:
+      start: java -jar target/quarkus-app/quarkus-run.jar
+```
+
+## Adding a Database
+
+```yaml title="description.yaml"
+services:
+  - hostname: app
+    type: java@21
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+Configure in `application.properties`:
+
+```properties
+spring.datasource.url=jdbc:postgresql://db:5432/${DB_NAME}
+spring.datasource.username=${DB_USER}
+spring.datasource.password=${DB_PASSWORD}
+spring.jpa.hibernate.ddl-auto=update
+```
+
+## JVM Optimization
+
+```yaml
+run:
+  start: |
+    java \
+      -Xmx1g \
+      -Xms512m \
+      -XX:+UseG1GC \
+      -XX:MaxGCPauseMillis=200 \
+      -XX:+UseContainerSupport \
+      -XX:MaxRAMPercentage=75.0 \
+      -jar target/app.jar
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails">
+    Ensure Maven/Gradle wrapper is committed:
+    ```bash
+    git add mvnw mvnw.cmd .mvn/
+    ```
+  </Accordion>
+  
+  <Accordion title="JAR not found">
+    Check your artifact name:
+    ```yaml
+    deployFiles:
+      - target/myapp-*.jar
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/java/overview">
+    Learn about Java runtime
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+</CardGroup>

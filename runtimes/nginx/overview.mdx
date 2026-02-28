@@ -1,0 +1,111 @@
+---
+title: Nginx
+description: Deploy and serve static content with Nginx on Zerops, a powerful web server optimized for high performance and scalability.
+---
+
+The Nginx static service provides a robust, scalable web server optimized for serving static content on Zerops. Built on the industry-standard [Nginx](https://nginx.org/) web server, it offers both simplicity for basic deployments and powerful customization options for advanced use cases.
+
+## Key Features
+
+### High Performance Web Server
+Nginx is renowned for its performance, stability, and low resource consumption. The Zerops implementation maintains these characteristics while adding enterprise-grade scalability.
+
+### Flexible Deployment Options
+You can use Nginx in two ways:
+- **Runtime only**: Deploy pre-built static files directly (no build phase needed)
+- **Build + Runtime**: Build your application using any framework (Node.js, PHP, Python, etc.), then serve it with Nginx
+
+### Auto Scaling
+Both vertical and horizontal auto scaling ensure your application runs smoothly while using only the necessary resources. Scale from 1 to 10 containers automatically based on demand.
+
+### Built-in SEO Support
+Integrated [Prerender.io](https://prerender.io) support ensures search engines and AI crawlers can properly index your Single Page Applications without additional configuration.
+
+### Customizable Configuration
+While Zerops provides sensible defaults, you have full control to customize:
+- Nginx server configuration
+- Document root directory
+- Custom ports and protocols
+- Environment variables
+- Runtime environment packages
+
+## Version Support
+
+Zerops supports multiple Nginx versions:
+- `nginx@latest` - Always uses the latest stable version
+- `nginx@1.22` - Nginx 1.22.x
+- `nginx@1.24` - Nginx 1.24.x
+- `nginx@1.26` - Nginx 1.26.x
+
+You can change the major version at any time through your `zerops.yaml` configuration.
+
+## Base Environment
+
+The base Nginx runtime environment includes:
+- Alpine Linux (default) or Ubuntu
+- Selected Nginx version
+- Zerops CLI tools
+- Common utilities: `composer`, `git`, `wget`
+
+## Default Configuration
+
+Out of the box, Nginx is configured to:
+- Listen on port 80 (HTTP)
+- Serve content from `/var/www`
+- Fall back to `index.html` for Single Page Applications
+- Log to system logger for centralized log management
+
+```nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+    root /var/www;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    access_log syslog:server=unix:/dev/log,facility=local1,tag=nginx,severity=info default_short;
+    error_log syslog:server=unix:/dev/log,facility=local1,tag=nginx,severity=error;
+}
+```
+
+## Common Use Cases
+
+### Single Page Applications
+Perfect for serving React, Vue, Angular, or any other SPA framework. The default configuration automatically handles client-side routing.
+
+### Static Websites
+Ideal for serving static HTML/CSS/JS sites, documentation, landing pages, or any pre-built content.
+
+### Frontend Applications
+Deploy the built output from modern frontend frameworks like Next.js (static export), Nuxt (static), Gatsby, or similar.
+
+## Network & Access
+
+All services within a Zerops project share a dedicated private network. Access your Nginx service from other services using its hostname and internal port (e.g., `app:80`).
+
+For public access, configure routing and domains through the Zerops GUI. All HTTPS traffic is automatically terminated at the Zerops load balancer with SSL certificates managed for you.
+
+<Info>
+  Do not configure port 443 in your Nginx service. HTTPS is handled by Zerops infrastructure, and requests are forwarded to your service as HTTP on port 80.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/runtimes/nginx/quickstart">
+    Get started with Nginx in minutes
+  </Card>
+  <Card title="Build Pipeline" icon="gear" href="/runtimes/nginx/build-pipeline">
+    Configure build and deployment
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/runtimes/nginx/scaling">
+    Set up auto scaling
+  </Card>
+  <Card title="Custom Configuration" icon="wrench" href="/runtimes/nginx/customize-web-server">
+    Customize your web server
+  </Card>
+</CardGroup>

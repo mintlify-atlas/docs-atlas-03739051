@@ -1,0 +1,464 @@
+---
+title: Configuration
+description: Learn how to configure zCLI using configuration files, environment variables, and command-line flags
+---
+
+zCLI supports multiple configuration methods to streamline your workflow. You can set default values for commands using configuration files, environment variables, or command-line flags.
+
+## Configuration Precedence
+
+Configuration options are applied in the following order (later sources override earlier ones):
+
+<Steps>
+  <Step title="Configuration Files">
+    Global (`~/.config/zerops/zcli.yaml`) and project-specific (`./.zcli.yaml`) files
+  </Step>
+  <Step title="Environment Variables">
+    Variables prefixed with `ZEROPS_`
+  </Step>
+  <Step title="Command-line Flags">
+    Flags passed directly to commands (highest precedence)
+  </Step>
+</Steps>
+
+<Note>
+  This precedence order means command-line flags will always override environment variables, which will override settings in configuration files.
+</Note>
+
+---
+
+## Configuration Files
+
+zCLI supports YAML configuration files in two locations:
+
+### Global Configuration
+
+Stored in your home directory:
+- `~/.config/zerops/zcli.yaml` (preferred)
+- `~/zerops/zcli.yaml` (alternative)
+
+Use this for organization-wide or user-wide defaults.
+
+### Project-specific Configuration
+
+Stored in your project root:
+- `./.zcli.yaml`
+
+Use this for project-specific settings that should be shared with your team.
+
+### How Configuration Files Are Merged
+
+1. zCLI first loads the global config file
+2. Then merges in the project-specific config if it exists
+3. Settings unique to the global config are preserved
+4. Settings in the project-specific config override duplicate keys from global config
+
+### Configuration File Examples
+
+<CodeGroup>
+
+```yaml Global Config (~/.config/zerops/zcli.yaml)
+# Set organization-wide defaults
+workspaceState: "all"
+
+# Default logging preferences
+verbose: false
+```
+
+```yaml Project Config (./.zcli.yaml)
+# Set project-specific settings
+projectId: "abc123def456"
+serviceId: "xyz789"
+
+# Override global workspace state for this project
+workspaceState: "clean"
+
+# Default setup from zerops.yml
+setup: "production"
+```
+
+```yaml Complete Example
+# Project and service defaults
+projectId: "my-project-id"
+serviceId: "my-service-id"
+
+# Push/deploy settings
+workspaceState: "staged"  # clean, staged, or all
+zeropsYamlPath: "./config/zerops.yml"
+workingDir: "./"
+
+# VPN settings
+mtu: 1420
+autoDisconnect: true
+
+# Service settings
+mode: "ha"  # ha or non_ha
+envIsolation: "service"  # service or none
+sshIsolation: "vpn"
+```
+
+</CodeGroup>
+
+### Supported Configuration Keys
+
+<ResponseField name="projectId" type="string">
+  Default project ID for commands
+</ResponseField>
+
+<ResponseField name="serviceId" type="string">
+  Default service ID for commands
+</ResponseField>
+
+<ResponseField name="workspaceState" type="string">
+  Default workspace state for push/deploy: `clean`, `staged`, or `all`
+</ResponseField>
+
+<ResponseField name="zeropsYamlPath" type="string">
+  Custom path to zerops.yml file
+</ResponseField>
+
+<ResponseField name="workingDir" type="string">
+  Default working directory
+</ResponseField>
+
+<ResponseField name="verbose" type="boolean">
+  Enable verbose logging
+</ResponseField>
+
+<ResponseField name="mtu" type="integer">
+  MTU value for VPN connections
+</ResponseField>
+
+<ResponseField name="autoDisconnect" type="boolean">
+  Auto-disconnect from VPN when connecting to a new project
+</ResponseField>
+
+---
+
+## Environment Variables
+
+### Standard Environment Variables
+
+Any command-line flag can be set via environment variables by:
+1. Using the `ZEROPS_` prefix
+2. Converting the flag name to UPPERCASE
+3. Using the full flag name (not shorthand)
+
+<CodeGroup>
+
+```bash Linux/macOS
+# Set default project and service
+export ZEROPS_PROJECTID=abc123def456
+export ZEROPS_SERVICEID=xyz789
+
+# Set workspace state
+export ZEROPS_WORKSPACESTATE=clean
+
+# Enable verbose logging
+export ZEROPS_VERBOSE=true
+
+# Custom zerops.yml path
+export ZEROPS_ZEROPSYAMLPATH=./config/zerops.yml
+```
+
+```powershell Windows PowerShell
+# Set default project and service
+$env:ZEROPS_PROJECTID="abc123def456"
+$env:ZEROPS_SERVICEID="xyz789"
+
+# Set workspace state
+$env:ZEROPS_WORKSPACESTATE="clean"
+
+# Enable verbose logging
+$env:ZEROPS_VERBOSE="true"
+```
+
+```bash .env File
+# Add to your .env file (requires a tool to load it)
+ZEROPS_PROJECTID=abc123def456
+ZEROPS_SERVICEID=xyz789
+ZEROPS_WORKSPACESTATE=staged
+ZEROPS_VERBOSE=false
+```
+
+</CodeGroup>
+
+### Special Environment Variables
+
+zCLI recognizes special environment variables that control its behavior:
+
+#### ZEROPS_CLI_TERMINAL_MODE
+
+Controls the interactive mode of zCLI:
+
+```bash
+export ZEROPS_CLI_TERMINAL_MODE=<mode>
+```
+
+<ParamField path="mode" type="string" default="auto">
+  Terminal mode:
+  - `auto` - Automatically detect if interactive mode can be used (default)
+  - `enabled` - Force interactive mode
+  - `disabled` - Disable interactive mode (useful in CI/CD)
+</ParamField>
+
+**Use cases:**
+- Set to `disabled` in CI/CD pipelines
+- Set to `enabled` for rich terminal UI
+- Leave as `auto` for normal usage
+
+**Example:**
+```bash
+# In CI/CD pipeline
+export ZEROPS_CLI_TERMINAL_MODE=disabled
+zcli push
+```
+
+#### ZEROPS_CLI_LOG_FILE_PATH
+
+Sets a custom location for the debug log file:
+
+```bash
+export ZEROPS_CLI_LOG_FILE_PATH=/path/to/custom/zcli.log
+```
+
+<Note>
+  zCLI must have write permissions for the specified log file location.
+</Note>
+
+---
+
+## Logging Configuration
+
+zCLI maintains debug logs for the `service push` and `service deploy` commands to help with troubleshooting.
+
+### Log File Locations
+
+#### Default Locations
+
+zCLI tries these locations in order:
+1. `/var/log/zcli.log` (if zCLI has write permissions)
+2. `~/.config/zerops/zerops.log` (fallback)
+
+#### Custom Location
+
+Set a custom log location using the environment variable:
+
+```bash
+export ZEROPS_CLI_LOG_FILE_PATH=/path/to/my/zcli.log
+```
+
+### Verbose Logging
+
+Enable additional debug information using the `--verbose` flag (or `-v`):
+
+```bash
+zcli service push --verbose
+zcli push -v
+```
+
+You can also enable verbose logging by default:
+
+<CodeGroup>
+
+```yaml Config File
+verbose: true
+```
+
+```bash Environment Variable
+export ZEROPS_VERBOSE=true
+```
+
+</CodeGroup>
+
+### Viewing Logs
+
+To troubleshoot deployment issues, check the log files:
+
+```bash
+# View the entire log file
+cat ~/.config/zerops/zerops.log
+
+# Stream new log entries in real-time
+tail -f ~/.config/zerops/zerops.log
+
+# View last 50 lines
+tail -n 50 ~/.config/zerops/zerops.log
+
+# Search for errors
+grep -i error ~/.config/zerops/zerops.log
+```
+
+Or use the built-in command:
+
+```bash
+zcli show-debug-logs
+```
+
+---
+
+## Configuration Examples
+
+Here are some common configuration scenarios:
+
+### Development Team Setup
+
+<CodeGroup>
+
+```yaml Project .zcli.yaml
+# Shared team configuration
+projectId: "team-project-123"
+workspaceState: "all"  # Include all local changes
+zeropsYamlPath: "./zerops.yml"
+```
+
+```yaml Personal ~/.config/zerops/zcli.yaml
+# Personal preferences
+verbose: true
+autoDisconnect: true
+```
+
+</CodeGroup>
+
+### CI/CD Pipeline
+
+```bash
+# In your CI/CD configuration
+export ZEROPS_CLI_TERMINAL_MODE=disabled
+export ZEROPS_PROJECTID=${CI_PROJECT_ID}
+export ZEROPS_SERVICEID=${CI_SERVICE_ID}
+export ZEROPS_WORKSPACESTATE=clean
+
+# Login and deploy
+zcli login ${ZEROPS_TOKEN}
+zcli push
+```
+
+### Multiple Projects
+
+```yaml ~/.config/zerops/zcli.yaml
+# Global defaults
+workspaceState: "staged"
+verbose: false
+autoDisconnect: true
+```
+
+Then use project-specific `.zcli.yaml` files in each project directory:
+
+```yaml project-a/.zcli.yaml
+projectId: "project-a-id"
+serviceId: "service-a-id"
+```
+
+```yaml project-b/.zcli.yaml
+projectId: "project-b-id"
+serviceId: "service-b-id"
+workspaceState: "clean"  # Override global setting
+```
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use project-specific configs for team projects">
+    Store `.zcli.yaml` in your project repository so all team members use the same defaults. Add it to version control.
+    
+    ```yaml .zcli.yaml
+    projectId: "shared-project-id"
+    serviceId: "main-service-id"
+    workspaceState: "staged"
+    ```
+  </Accordion>
+  
+  <Accordion title="Use global config for personal preferences">
+    Store personal preferences like verbose logging in your global config file.
+    
+    ```yaml ~/.config/zerops/zcli.yaml
+    verbose: true
+    autoDisconnect: true
+    ```
+  </Accordion>
+  
+  <Accordion title="Use environment variables in CI/CD">
+    Environment variables are perfect for CI/CD pipelines where you need to inject configuration dynamically.
+    
+    ```bash
+    export ZEROPS_PROJECTID=${CI_PROJECT_ID}
+    export ZEROPS_CLI_TERMINAL_MODE=disabled
+    ```
+  </Accordion>
+  
+  <Accordion title="Keep secrets out of config files">
+    Never store access tokens in configuration files. Always pass them securely via environment variables or CI/CD secrets.
+    
+    ```bash
+    # Good: Use environment variable
+    zcli login ${ZEROPS_TOKEN}
+    
+    # Bad: Don't hardcode tokens
+    zcli login abc123...  # Never do this!
+    ```
+  </Accordion>
+  
+  <Accordion title="Enable verbose logging for troubleshooting">
+    When debugging deployment issues, enable verbose logging to get detailed information in the log files.
+    
+    ```bash
+    zcli push --verbose
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Troubleshooting Configuration
+
+### Check Current Configuration
+
+View environment variables and their values:
+
+```bash
+zcli env
+```
+
+### Configuration Not Working
+
+<Steps>
+  <Step title="Check file location">
+    Ensure your config file is in the correct location:
+    - Global: `~/.config/zerops/zcli.yaml` or `~/zerops/zcli.yaml`
+    - Project: `./.zcli.yaml` in project root
+  </Step>
+  
+  <Step title="Check YAML syntax">
+    Make sure your YAML file is valid. Use a YAML validator if needed.
+  </Step>
+  
+  <Step title="Check precedence">
+    Remember: command-line flags > environment variables > config files
+    
+    A command-line flag will always override config file settings.
+  </Step>
+  
+  <Step title="Check environment variables">
+    Verify environment variables are set:
+    ```bash
+    echo $ZEROPS_PROJECTID  # Linux/macOS
+    echo $env:ZEROPS_PROJECTID  # Windows PowerShell
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Commands Reference" icon="book" href="/cli/commands">
+    Explore all available zCLI commands
+  </Card>
+  <Card title="CLI Overview" icon="terminal" href="/cli/overview">
+    Back to CLI overview and quick start
+  </Card>
+</CardGroup>

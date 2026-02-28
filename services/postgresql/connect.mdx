@@ -1,0 +1,228 @@
+---
+title: Connect to PostgreSQL
+description: Learn how to connect to your PostgreSQL database in Zerops from various environments.
+---
+
+This guide covers how to connect to your PostgreSQL database in Zerops, both from services within the same project and from outside the Zerops environment.
+
+## Connection Options Overview
+
+Zerops provides several ways to connect to PostgreSQL:
+
+1. **Internal connections** - Between services in the same Zerops project (via private network)
+2. **Remote connections**:
+   - **VPN access** - From your local machine via Zerops VPN
+   - **Direct IP access** - Enables external applications to connect using TLS encryption by opening public ports on IPv6 (available by default) or IPv4 (requires add-on activation if not already enabled)
+
+## Connection Details
+
+You'll find PostgreSQL connection details in the service detail page under the **Peek access details** button (shows hostname, port, user, password, and connection string).
+
+The full list of connection-related environment variables is available in the service detail under **Environment variables**.
+
+### Connection Parameters
+
+| Parameter | Internal | External (TLS) | Env Variable |
+|-----------|----------|----------------|-------------|
+| **Hostname** | Service hostname | Public IP address | `hostname` |
+| **Port (primary)** | 5432 | 6432 (via pgBouncer) | `port` / `portTls` |
+| **Port (replicas, HA only)** | 5433 | N/A | `portReplicas` |
+| **User** | Identical to hostname | Same as internal | `user` |
+| **Password** | Generated at creation | Same as internal | `password` |
+| **Connection string (primary)** | `postgresql://${user}:${password}@${hostname}:5432/${dbName}` | Same format with TLS port | `connectionString` / `connectionTlsString` |
+| **Connection string (replicas, HA only)** | `postgresql://${user}:${password}@${hostname}:5433/${dbName}` | N/A | `connectionStringReplicas` |
+| **Database name** | db | Same as internal | `dbName` |
+
+<Tip>
+If you're running PostgreSQL in High Availability (HA) mode, configure your application to route read queries to port **5433**. This distributes the load across all replicas, reducing pressure on the primary node and improving overall throughput.
+</Tip>
+
+<Warning>
+Zerops creates a system user named `zps` with full privileges for maintenance purposes. Do not delete, change the password, or remove privileges from this user, as it will disrupt Zerops' ability to maintain the database cluster.
+</Warning>
+
+<Info>
+For more information about default PostgreSQL setup, users, and databases, see [Manage PostgreSQL Users and Databases](/services/postgresql/manage).
+</Info>
+
+## Connect from Services in the Same Project
+
+All services within a Zerops project share a dedicated private network. There are two ways to implement connections between services in the same project:
+
+### Method 1: Direct Connection Parameters
+
+You can directly use the connection parameters from Peek Access Details:
+
+```
+host = database1
+port = 5432
+user = database1
+password = ********** (find under Peek Access Details)
+```
+
+For read operations in HA mode, use port `5433` instead of `5432` with the same credentials.
+
+### Method 2: Environment Variables (Recommended)
+
+For better maintainability, Zerops creates environment variables for each PostgreSQL service that you can use in your application configuration. List of service environment variables is available in Zerops GUI. Go to a PostgreSQL service detail and choose **Environment variables**.
+
+To use variables from one service in another, prefix the variable name with the service hostname and underscore - to access the `connectionString` variable of `postgresql1`, use `postgresql1_connectionString`.
+
+For read-only connections (HA mode only), use the `connectionStringReplicas` variable instead.
+
+<CodeGroup>
+```javascript Node.js
+// Using environment variables to connect
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.postgresql1_connectionString
+});
+
+// For read operations in HA mode
+const readPool = new Pool({
+  connectionString: process.env.postgresql1_connectionStringReplicas
+});
+```
+
+```python Python
+import os
+import psycopg2
+
+# Using environment variables to connect
+conn = psycopg2.connect(
+    os.environ['postgresql1_connectionString']
+)
+
+# For read operations in HA mode
+read_conn = psycopg2.connect(
+    os.environ['postgresql1_connectionStringReplicas']
+)
+```
+
+```php PHP
+<?php
+// Using environment variables to connect
+$connectionString = getenv('postgresql1_connectionString');
+$conn = pg_connect($connectionString);
+
+// For read operations in HA mode
+$readConnectionString = getenv('postgresql1_connectionStringReplicas');
+$readConn = pg_connect($readConnectionString);
+?>
+```
+</CodeGroup>
+
+For more details on how to use environment variables, and instructions for adding your own custom variables, see the [Environment Variables](/features/env-variables) documentation.
+
+<Warning>
+**Important notes:**
+- When changing passwords, update both the database user password and the environment variable separately - they don't automatically synchronize.
+- While both `postgresql://` and `postgres://` URI formats are valid, Zerops uses the `postgresql://` format. If your software requires `postgres://`, create a custom environment variable with this format.
+- Do not use SSL/TLS protocols for internal connections. Security is assured by the project's private network.
+</Warning>
+
+## Connect Remotely
+
+Zerops offers two methods for connecting to your PostgreSQL database from outside the Zerops environment:
+
+### Method 1: Connect via Zerops VPN
+
+You can securely connect to PostgreSQL from your local workstation via Zerops VPN:
+
+<Steps>
+  <Step title="Install & set up zCLI">
+    [Install and configure zCLI](/references/cli) if you haven't already.
+  </Step>
+  
+  <Step title="Start the Zerops VPN">
+    [Start the VPN connection](/references/networking/vpn#start-vpn) to your project.
+  </Step>
+  
+  <Step title="Get connection details">
+    Use the connection details from Access Details in the PostgreSQL service detail in Zerops GUI.
+  </Step>
+  
+  <Step title="Connect with your tool">
+    Connect using your preferred database client (pgAdmin, DBeaver, psql, etc.).
+  </Step>
+  
+  <Step title="Stop the VPN when finished">
+    [Stop the Zerops VPN](/references/networking/vpn#stop-vpn) when you're done.
+  </Step>
+</Steps>
+
+<Warning>
+**Important notes:**
+- Do not use SSL/TLS protocols when connecting over VPN. Security is provided by the VPN tunnel.
+- If your connection over VPN doesn't work, try adding `.zerops` suffix to the service hostname (e.g., `database1.zerops`). For additional help, check the [VPN troubleshooting page](/references/networking/vpn#troubleshooting).
+</Warning>
+
+### Method 2: Connect via Direct IP Access
+
+Direct IP Access uses [pgBouncer](https://www.pgbouncer.org/) for connection pooling and TLS termination.
+
+Internally, port `5432` is available without SSL (and port `5433` for reads in HA mode). Externally, connections are secured with TLS through pgBouncer (port `6432`) before being routed to your PostgreSQL service. The read replica port is not available for external connections.
+
+#### Enable external access
+
+<Steps>
+  <Step title="Navigate to Public Access settings">
+    Navigate to your PostgreSQL service in the Zerops GUI and choose the **Public Access through IP Addresses** section.
+  </Step>
+  
+  <Step title="Choose IP version">
+    Choose either IPv6 (available by default) or IPv4 (requires the [unique IPv4](/references/networking/public-access#ipv4-configuration) add-on).
+  </Step>
+  
+  <Step title="Configure ports">
+    Open one or more ports and point them to your PostgreSQL service (the system will direct them through pgBouncer):
+    - Choose any port from 10-65435 (except 80 and 443)
+    - Select destination service and internal port
+    - Each public port can be mapped to any internal service port
+    - Multiple public ports can point to the same internal port if needed
+    - Port configurations can be set independently for IPv4 and IPv6
+  </Step>
+  
+  <Step title="Enable firewall (optional)">
+    Optionally enable firewall protection for additional security.
+  </Step>
+  
+  <Step title="Publish changes">
+    Click the **Publish X IP access change(s)** button to apply your settings.
+  </Step>
+</Steps>
+
+## Connection Examples
+
+### Using psql Command Line
+
+```bash
+# Connect to primary (read/write)
+psql -h database1 -U database1 -d db
+
+# Connect to replicas for read operations (HA mode only)
+psql -h database1 -p 5433 -U database1 -d db
+```
+
+### Using Connection String
+
+```bash
+# Primary connection
+postgresql://database1:your-password@database1:5432/db
+
+# Replica connection (HA mode only)
+postgresql://database1:your-password@database1:5433/db
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Manage Users & Databases" icon="database" href="/services/postgresql/manage">
+    Create and manage users, databases, and plugins
+  </Card>
+  
+  <Card title="Backup & Restore" icon="clock-rotate-left" href="/services/postgresql/backup">
+    Configure backups and restore your data
+  </Card>
+</CardGroup>

@@ -1,0 +1,113 @@
+---
+title: PostgreSQL Service Overview
+description: Powerful, reliable PostgreSQL database service with automatic scaling and high availability in Zerops.
+---
+
+[PostgreSQL](https://www.postgresql.org/) is a powerful, open source object-relational database system with over 35 years of active development that has earned it a strong reputation for reliability, feature robustness, and performance.
+
+## Key Features
+
+### Automatic Scaling
+Zerops automatically scales your PostgreSQL service based on actual database usage:
+- **Vertical auto-scaling** for CPU, RAM, and disk resources
+- Configure minimum and maximum resource limits
+- Choose between shared or dedicated CPU modes
+- Set custom scaling thresholds
+
+Learn more in [How Zerops scales PostgreSQL](/postgresql/how-to/scale).
+
+### High Availability Mode
+Run PostgreSQL in highly available mode for production environments:
+- **3 database containers** with automatic failover
+- **2 free database proxies** for connection management
+- Containers distributed across different physical machines
+- **Redundant data storage** in 3 identical copies
+- Automatic recovery from container or machine failures
+- **Dedicated read replica port** (5433) for improved performance
+
+### Single Container Mode
+For development and non-critical environments:
+- One container with vertical scaling
+- Cost-effective for testing and development
+- Full PostgreSQL functionality
+
+### Automated Backups
+- Encrypted backups using `pg_dump`
+- Configurable retention policies
+- Manual and scheduled backups
+- Protected tags for important snapshots
+- Stored in isolated object storage
+
+See [Backup in PostgreSQL](/postgresql/how-to/backup) for details.
+
+### Built-in Management
+- Default database and user created automatically
+- Environment variables for easy connection
+- Support for PostgreSQL plugins and extensions
+- Web-based management tools (AdminerEvo, phpMyAdmin)
+- Command-line access via VPN
+
+## Supported Versions
+
+Zerops supports multiple PostgreSQL versions. Choose the version that best fits your application requirements when creating the service.
+
+## Connection Options
+
+### Internal Connections
+Connect from services within the same Zerops project:
+- Private network with no SSL/TLS required
+- Use service hostname and port 5432
+- Environment variables available
+- Read replicas on port 5433 (HA mode only)
+
+### Remote Connections
+Connect from outside Zerops:
+- **VPN access** - Secure connection via Zerops VPN
+- **Direct IP access** - TLS-encrypted connections via pgBouncer
+- IPv6 available by default, IPv4 with add-on
+
+Learn more in [Connect to PostgreSQL](/postgresql/how-to/connect).
+
+## Quick Start
+
+<Steps>
+  <Step title="Create PostgreSQL Service">
+    Create a new PostgreSQL service using [Zerops GUI](/postgresql/how-to/create#create-postgresql-using-zerops-gui) or [zCLI](/postgresql/how-to/create#create-postgresql-using-zcli).
+  </Step>
+  
+  <Step title="Get Connection Details">
+    Find connection details in the service dashboard under **Peek access details** or use environment variables.
+  </Step>
+  
+  <Step title="Connect Your Application">
+    Use the connection string or individual parameters to connect from your application or management tool.
+  </Step>
+  
+  <Step title="Manage Users and Databases">
+    Create additional users and databases as needed using [management tools](/postgresql/how-to/manage).
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create PostgreSQL Service" icon="plus" href="/services/postgresql/create">
+    Set up a new PostgreSQL service with GUI or zCLI
+  </Card>
+  
+  <Card title="Connect to PostgreSQL" icon="link" href="/services/postgresql/connect">
+    Learn connection methods for internal and remote access
+  </Card>
+  
+  <Card title="Manage Users & Databases" icon="database" href="/services/postgresql/manage">
+    Manage users, databases, and plugins
+  </Card>
+  
+  <Card title="Backup & Restore" icon="clock-rotate-left" href="/services/postgresql/backup">
+    Configure backups and restore your data
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+Join our [Discord community](https://discord.com/invite/WDvCZ54) to ask questions and share knowledge with other Zerops users.

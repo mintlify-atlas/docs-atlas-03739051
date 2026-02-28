@@ -1,0 +1,433 @@
+---
+title: Node.js Deployment Process
+description: Understand how Zerops deploys Node.js applications with zero downtime and readiness checks.
+---
+
+Zerops handles Node.js deployments automatically with zero-downtime updates, health checks, and intelligent traffic routing.
+
+## Deployment Flow
+
+When you trigger a deployment, Zerops follows this process:
+
+<Steps>
+  <Step title="Build Phase">
+    1. Creates a build container with your specified Node.js version
+    2. Runs `prepareCommands` to set up the build environment
+    3. Executes `buildCommands` to build your application
+    4. Collects files specified in `deployFiles`
+  </Step>
+  
+  <Step title="Prepare Runtime">
+    1. Creates a runtime container (if needed)
+    2. Runs runtime `prepareCommands` (cached after first run)
+    3. Copies built files to `/var/www`
+  </Step>
+  
+  <Step title="Deploy">
+    1. Runs `initCommands` on each container
+    2. Starts your application with the `start` command
+    3. Performs readiness checks
+    4. Routes traffic to healthy containers
+  </Step>
+  
+  <Step title="Cleanup">
+    Once new containers are healthy, old containers are gracefully shut down.
+  </Step>
+</Steps>
+
+## Triggering Deployments
+
+### From Git Repository
+
+Automatic deployment from Git:
+
+<Steps>
+  <Step title="Configure Git integration">
+    In the Zerops GUI:
+    1. Navigate to your service
+    2. Click **Deploy**
+    3. Select **From Git**
+    4. Enter repository URL and branch
+  </Step>
+  
+  <Step title="Automatic triggers">
+    Zerops automatically deploys when:
+    - You push to the configured branch
+    - You manually trigger a deployment
+  </Step>
+</Steps>
+
+### Using zCLI
+
+Deploy from your local machine:
+
+```bash
+# Deploy from current directory
+zcli push
+
+# Deploy specific service
+zcli push --serviceId=<service-id>
+```
+
+### GitHub Actions
+
+Automate deployments with GitHub Actions:
+
+```yaml title=".github/workflows/deploy.yml"
+name: Deploy to Zerops
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to Zerops
+        uses: zeropsio/github-action@v1
+        with:
+          token: ${{ secrets.ZEROPS_TOKEN }}
+          serviceId: ${{ secrets.ZEROPS_SERVICE_ID }}
+```
+
+## Readiness Checks
+
+Readiness checks ensure new containers are healthy before receiving traffic.
+
+### HTTP Readiness Check
+
+Check if your application responds to HTTP requests:
+
+```yaml
+zerops:
+  - setup: app
+    deploy:
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /health
+          scheme: http
+    run:
+      start: npm start
+```
+
+<Accordion title="How HTTP checks work">
+  Zerops repeatedly sends GET requests to `http://127.0.0.1:3000/health` until:
+  - The endpoint returns HTTP 200
+  - The timeout is reached (deployment fails)
+  
+  Your `/health` endpoint should verify:
+  - The server is running
+  - Database connections are ready
+  - Critical services are available
+</Accordion>
+
+### Command Readiness Check
+
+Run a custom command to verify readiness:
+
+```yaml
+zerops:
+  - setup: app
+    deploy:
+      readinessCheck:
+        exec:
+          command: |
+            node -e "require('./health-check.js')"
+```
+
+Example health check script:
+
+```javascript title="health-check.js"
+const { Pool } = require('pg');
+
+async function healthCheck() {
+  const pool = new Pool({
+    host: 'db',
+    database: 'db',
+    user: 'db'
+  });
+  
+  try {
+    // Check database connection
+    await pool.query('SELECT 1');
+    
+    // Check critical services
+    // ...
+    
+    console.log('Health check passed');
+    process.exit(0);
+  } catch (error) {
+    console.error('Health check failed:', error);
+    process.exit(1);
+  } finally {
+    await pool.end();
+  }
+}
+
+healthCheck();
+```
+
+## Zero-Downtime Deployments
+
+Zerops ensures your application stays available during deployments:
+
+### How It Works
+
+1. **New containers start** - Zerops creates new runtime containers with updated code
+2. **Readiness checks** - New containers must pass health checks
+3. **Traffic shift** - Load balancer routes traffic to new containers
+4. **Graceful shutdown** - Old containers finish existing requests before stopping
+
+<Info>
+  During deployment, both old and new versions may serve requests briefly. Ensure backwards compatibility.
+</Info>
+
+### Rolling Updates
+
+With multiple containers, Zerops updates them progressively:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 3
+    maxContainers: 6
+```
+
+Update process:
+1. Update 1st container → health check → route traffic
+2. Update 2nd container → health check → route traffic
+3. Update 3rd container → health check → route traffic
+4. Continue until all containers updated
+
+## Deployment Logs
+
+Monitor deployments in real-time:
+
+### Build Log
+
+View build progress:
+- `prepareCommands` output
+- `buildCommands` execution
+- Dependency installation
+- Build errors and warnings
+
+### Runtime Log
+
+Monitor application startup:
+- Container initialization
+- `initCommands` output
+- Application start command
+- Runtime errors
+
+### Access Logs
+
+View logs in Zerops GUI:
+1. Go to your service
+2. Click **Logs**
+3. Select log type (Build, Runtime, etc.)
+4. Filter by time range
+
+## Environment Variables in Deployment
+
+Manage environment variables across deployments:
+
+### Secret Variables
+
+Set sensitive data in the GUI (not in `zerops.yaml`):
+
+```yaml
+services:
+  - hostname: app
+    envSecrets:
+      DB_PASSWORD: secretvalue
+      API_KEY: abc123
+```
+
+### Build vs Runtime Variables
+
+<Tabs>
+  <Tab title="Build Variables">
+    Available during build:
+    
+    ```yaml
+    build:
+      envVariables:
+        NODE_ENV: production
+        API_URL: https://api.example.com
+    ```
+  </Tab>
+  
+  <Tab title="Runtime Variables">
+    Available when app runs:
+    
+    ```yaml
+    run:
+      envVariables:
+        NODE_ENV: production
+        PORT: 3000
+        DB_HOST: db
+    ```
+  </Tab>
+</Tabs>
+
+### Referencing Secret Variables
+
+Reference secrets set in GUI:
+
+```yaml
+run:
+  envVariables:
+    DB_PASSWORD: ${db_password}
+    API_KEY: ${api_key}
+```
+
+## Deployment Strategies
+
+### Blue-Green Deployment
+
+Manually test before switching traffic:
+
+1. Deploy to a new service
+2. Test using internal hostname
+3. Switch public domain to new service
+4. Remove old service
+
+### Canary Deployment
+
+Gradually roll out to users:
+
+1. Deploy with minimum containers:
+   ```yaml
+   minContainers: 1
+   maxContainers: 10
+   ```
+2. Monitor metrics (errors, performance)
+3. Increase `minContainers` if stable
+4. Scale to full capacity
+
+## Rollback
+
+If a deployment fails or causes issues:
+
+<Steps>
+  <Step title="Via GUI">
+    1. Go to service detail
+    2. Click **Deployments** history
+    3. Select previous successful deployment
+    4. Click **Redeploy**
+  </Step>
+  
+  <Step title="Via Git">
+    ```bash
+    # Revert the commit
+    git revert HEAD
+    git push
+    
+    # Zerops automatically deploys the reverted version
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting Deployments
+
+### Build Fails
+
+<AccordionGroup>
+  <Accordion title="Dependency installation fails">
+    Check your package manager:
+    
+    ```yaml
+    buildCommands:
+      - npm ci --verbose  # Show detailed output
+      - npm run build
+    ```
+    
+    Ensure `package-lock.json` is committed.
+  </Accordion>
+  
+  <Accordion title="Build command errors">
+    Test locally first:
+    
+    ```bash
+    # Run the same commands locally
+    npm ci
+    npm run build
+    ```
+    
+    Check build logs for specific errors.
+  </Accordion>
+  
+  <Accordion title="Out of memory">
+    Increase build resources or optimize build:
+    
+    ```yaml
+    buildCommands:
+      - node --max-old-space-size=4096 node_modules/.bin/webpack
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Readiness Check Fails
+
+<AccordionGroup>
+  <Accordion title="Health endpoint not responding">
+    Ensure your app listens on the correct port:
+    
+    ```javascript
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Database connection fails">
+    Check database service is running and accessible:
+    
+    ```javascript
+    // Use service hostname
+    const pool = new Pool({
+      host: 'db',  // Not 'localhost'
+      database: 'db',
+      user: 'db'
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Health Checks" icon="heart-pulse">
+    Always implement readiness checks to prevent routing traffic to broken deployments.
+  </Card>
+  
+  <Card title="Test Locally First" icon="flask">
+    Run build commands locally before deploying to catch issues early.
+  </Card>
+  
+  <Card title="Monitor Logs" icon="file-lines">
+    Watch deployment logs in real-time to catch issues immediately.
+  </Card>
+  
+  <Card title="Keep Dependencies Updated" icon="arrows-rotate">
+    Regular updates prevent security issues and deployment failures.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Scaling" icon="chart-line" href="/runtimes/nodejs/scaling">
+    Set up auto-scaling for your application.
+  </Card>
+  
+  <Card title="Build Pipeline" icon="code" href="/runtimes/nodejs/build-pipeline">
+    Advanced build configuration options.
+  </Card>
+</CardGroup>

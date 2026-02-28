@@ -1,0 +1,443 @@
+---
+title: Go Runtime
+description: Deploy and scale Go applications on Zerops with automatic compilation and high-performance execution.
+---
+
+## What is Go on Zerops?
+
+Zerops provides a fully managed Go runtime environment with automatic compilation, built-in module support, and zero-config deployment. Build and deploy high-performance Go applications, APIs, and microservices with enterprise-grade reliability.
+
+<Info>
+Go is a statically typed, compiled high-level programming language designed at Google. [Learn more about Go →](https://go.dev/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Latest Go Versions" icon="code">
+    Support for Go 1.19 through 1.22 with automatic compilation
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on actual resource usage
+  </Card>
+  <Card title="Go Modules" icon="box">
+    Built-in Go modules support for dependency management
+  </Card>
+  <Card title="Static Compilation" icon="bolt">
+    Compile to static binaries for maximum performance and minimal runtime overhead
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+Zerops supports multiple Go versions:
+
+- Go 1.22 (Latest)
+- Go 1.21
+- Go 1.20
+- Go 1.19
+
+<Note>
+You can change the major version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Quick Example
+
+Deploy a Go application in minutes:
+
+```yaml
+project:
+  name: my-go-app
+services:
+  - hostname: app
+    type: go@1.22
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-go-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The Go runtime environment includes:
+
+- Alpine Linux (default) or Ubuntu
+- Selected Go version
+- Go modules support
+- Git utilities
+- Zerops CLI tools
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="HTTP APIs">
+    Build high-performance REST APIs with the standard library or frameworks like Gin.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: go@1.22
+          buildCommands:
+            - go mod download
+            - go build -o app .
+          deployFiles:
+            - app
+        run:
+          start: ./app
+          ports:
+            - port: 8080
+    ```
+  </Accordion>
+  
+  <Accordion title="Microservices">
+    Deploy scalable microservices with gRPC or HTTP.
+    
+    ```yaml
+    zerops:
+      - setup: service
+        build:
+          base: go@1.22
+          buildCommands:
+            - go mod download
+            - CGO_ENABLED=0 go build -ldflags=\"-s -w\" -o app cmd/main.go
+          deployFiles:
+            - app
+            - config
+        run:
+          start: ./app
+    ```
+  </Accordion>
+  
+  <Accordion title="Web Applications">
+    Build web apps with frameworks like Echo or Fiber.
+    
+    ```yaml
+    zerops:
+      - setup: web
+        build:
+          base: go@1.22
+          buildCommands:
+            - go mod download
+            - go build -o app .
+          deployFiles:
+            - app
+            - static
+            - templates
+        run:
+          start: ./app
+    ```
+  </Accordion>
+  
+  <Accordion title="CLI Tools & Workers">
+    Deploy background workers and CLI tools.
+    
+    ```yaml
+    zerops:
+      - setup: worker
+        build:
+          base: go@1.22
+          buildCommands:
+            - go mod download
+            - go build -o worker cmd/worker/main.go
+          deployFiles:
+            - worker
+        run:
+          start: ./worker
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Process
+
+### Standard Build
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: go@1.22
+      buildCommands:
+        - go mod download
+        - go build -o app .
+      deployFiles:
+        - app
+      cache: ~/go/pkg/mod
+```
+
+### Optimized Build
+
+Create smaller, optimized binaries:
+
+```yaml
+build:
+  base: go@1.22
+  buildCommands:
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o app .
+  deployFiles:
+    - app
+```
+
+### Multi-Binary Build
+
+Build multiple binaries in one project:
+
+```yaml
+build:
+  base: go@1.22
+  buildCommands:
+    - go mod download
+    - go build -o api cmd/api/main.go
+    - go build -o worker cmd/worker/main.go
+  deployFiles:
+    - api
+    - worker
+```
+
+## Runtime Configuration
+
+### Simple HTTP Server
+
+```yaml
+run:
+  start: ./app
+  ports:
+    - port: 8080
+      httpSupport: true
+```
+
+### With Custom Arguments
+
+```yaml
+run:
+  start: ./app --port=8080 --env=production
+  envVariables:
+    GO_ENV: production
+```
+
+### Health Check
+
+```yaml
+run:
+  start: ./app
+  healthCheck:
+    httpGet:
+      port: 8080
+      path: /health
+```
+
+## Advanced Build Configurations
+
+### With CGO Dependencies
+
+```yaml
+build:
+  base: go@1.22
+  os: ubuntu
+  prepareCommands:
+    - sudo apt-get update
+    - sudo apt-get install -y gcc g++ make
+  buildCommands:
+    - go mod download
+    - CGO_ENABLED=1 go build -o app .
+  deployFiles:
+    - app
+```
+
+### Cross-Platform Build
+
+```yaml
+build:
+  base: go@1.22
+  buildCommands:
+    - go mod download
+    - GOOS=linux GOARCH=amd64 go build -o app .
+  deployFiles:
+    - app
+```
+
+### With Build Tags
+
+```yaml
+build:
+  buildCommands:
+    - go mod download
+    - go build -tags=production -o app .
+```
+
+## Environment Variables
+
+Set runtime configuration:
+
+```yaml
+run:
+  envVariables:
+    GO_ENV: production
+    PORT: 8080
+    LOG_LEVEL: info
+```
+
+Access in Go:
+
+```go
+package main
+
+import "os"
+
+func main() {
+    env := os.Getenv("GO_ENV")
+    port := os.Getenv("PORT")
+}
+```
+
+## Common Frameworks
+
+### Gin Framework
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/gin-gonic/gin"
+    "os"
+)
+
+func main() {
+    r := gin.Default()
+    
+    r.GET("/", func(c *gin.Context) {
+        c.JSON(200, gin.H{
+            "message": "Hello from Zerops!",
+        })
+    })
+    
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    r.Run(":" + port)
+}
+```
+
+### Echo Framework
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/labstack/echo/v4"
+    "net/http"
+)
+
+func main() {
+    e := echo.New()
+    
+    e.GET("/", func(c echo.Context) error {
+        return c.JSON(http.StatusOK, map[string]string{
+            "message": "Hello from Zerops!",
+        })
+    })
+    
+    e.Start(":8080")
+}
+```
+
+### Fiber Framework
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/gofiber/fiber/v2"
+)
+
+func main() {
+    app := fiber.New()
+    
+    app.Get("/", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{
+            "message": "Hello from Zerops!",
+        })
+    })
+    
+    app.Listen(":8080")
+}
+```
+
+## Database Integration
+
+### PostgreSQL with GORM
+
+```go
+import (
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
+    "os"
+)
+
+func connectDB() (*gorm.DB, error) {
+    dsn := fmt.Sprintf(
+        "host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable",
+        "db",
+        os.Getenv("DB_USER"),
+        os.Getenv("DB_PASSWORD"),
+        os.Getenv("DB_NAME"),
+    )
+    return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+}
+```
+
+### Redis Connection
+
+```go
+import "github.com/go-redis/redis/v8"
+
+func connectRedis() *redis.Client {
+    return redis.NewClient(&redis.Options{
+        Addr: "redis:6379",
+    })
+}
+```
+
+## Performance Optimization
+
+### Build Cache
+
+Cache Go modules for faster builds:
+
+```yaml
+build:
+  cache: ~/go/pkg/mod
+```
+
+### Static Binaries
+
+Create fully static binaries:
+
+```yaml
+build:
+  buildCommands:
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o app .
+```
+
+### Parallel Builds
+
+```yaml
+build:
+  buildCommands:
+    - go mod download
+    - go build -p 4 -o app .
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/go/quickstart">
+    Deploy your first Go application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-go-hello-world">
+    Explore Go examples on GitHub
+  </Card>
+</CardGroup>

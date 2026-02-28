@@ -1,0 +1,445 @@
+---
+title: Node.js Build Pipeline
+description: Configure your Node.js build and deployment pipeline with zerops.yaml.
+---
+
+Zerops provides a customizable build and runtime environment for Node.js applications. Configure your entire pipeline using a `zerops.yaml` file in your repository root.
+
+## Basic zerops.yaml Structure
+
+Here's a complete example:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      cache: node_modules
+    
+    run:
+      base: nodejs@20
+      ports:
+        - port: 3000
+          httpSupport: true
+      start: npm start
+```
+
+## Build Configuration
+
+### base
+
+**Required.** Sets the Node.js version for the build environment.
+
+```yaml
+build:
+  base: nodejs@20
+```
+
+Available versions:
+- `nodejs@18`
+- `nodejs@20`
+- `nodejs@22`
+- `nodejs@latest`
+
+The base environment includes:
+- Alpine Linux (latest)
+- Selected Node.js version
+- npm, yarn, git, and npx
+- Zerops CLI (zsc)
+
+<Note>
+  Changing the base version invalidates your build cache.
+</Note>
+
+### os
+
+**Optional.** Choose the operating system.
+
+```yaml
+build:
+  base: nodejs@20
+  os: ubuntu  # or alpine (default)
+```
+
+Options:
+- `alpine` (default) - Alpine Linux 3.19
+- `ubuntu` - Ubuntu 22.04
+
+### prepareCommands
+
+**Optional.** Install additional dependencies before building.
+
+```yaml
+build:
+  base: nodejs@20
+  prepareCommands:
+    - apt-get update
+    - apt-get install -y python3 make g++
+    - npm install -g pnpm
+```
+
+<Accordion title="How prepare commands work">
+  Zerops runs prepare commands in order before your build:
+  1. Creates a build container
+  2. Downloads your code to `/var/www`
+  3. Runs prepare commands
+  4. Proceeds to build commands
+  
+  These commands are cached. Modifying `prepareCommands` invalidates the cache.
+</Accordion>
+
+### buildCommands
+
+**Optional.** Define commands to build your application.
+
+<CodeGroup>
+```yaml Separate commands
+buildCommands:
+  - npm ci
+  - npm run build
+  - npm test
+```
+
+```yaml Single shell
+buildCommands:
+  - |
+    npm ci
+    npm run build
+    npm test
+```
+</CodeGroup>
+
+Common build patterns:
+
+<Tabs>
+  <Tab title="npm">
+    ```yaml
+    buildCommands:
+      - npm ci
+      - npm run build
+    ```
+  </Tab>
+  
+  <Tab title="yarn">
+    ```yaml
+    buildCommands:
+      - yarn install --frozen-lockfile
+      - yarn build
+    ```
+  </Tab>
+  
+  <Tab title="pnpm">
+    ```yaml
+    prepareCommands:
+      - npm install -g pnpm
+    buildCommands:
+      - pnpm install --frozen-lockfile
+      - pnpm build
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  If any command returns a non-zero exit code, the build fails. Check build logs for debugging.
+</Warning>
+
+### deployFiles
+
+**Required.** Specify which files to deploy after a successful build.
+
+```yaml
+deployFiles:
+  - dist
+  - node_modules
+  - package.json
+```
+
+Common patterns:
+
+<Tabs>
+  <Tab title="Built app">
+    ```yaml
+    deployFiles:
+      - dist
+      - node_modules
+      - package.json
+    ```
+  </Tab>
+  
+  <Tab title="Source code">
+    ```yaml
+    deployFiles:
+      - src
+      - node_modules
+      - package.json
+    ```
+  </Tab>
+  
+  <Tab title="Everything">
+    ```yaml
+    deployFiles: .
+    ```
+  </Tab>
+</Tabs>
+
+#### Using Wildcards
+
+Use `~` as a wildcard:
+
+```yaml
+# Deploy all package.json files in any directory
+deployFiles: ./~/package.json
+
+# Deploy all folders under src/
+deployFiles: ./src/~/
+```
+
+#### .deployignore
+
+Create a `.deployignore` file to exclude files:
+
+```text title=".deployignore"
+# Ignore test files
+**/*.test.js
+**/*.spec.js
+
+# Ignore documentation
+/docs
+*.md
+
+# Ignore development files
+.env.local
+.vscode
+```
+
+### cache
+
+**Optional.** Cache files/folders for faster builds.
+
+```yaml
+cache: node_modules
+```
+
+Multiple paths:
+
+```yaml
+cache:
+  - node_modules
+  - .npm
+  - dist
+```
+
+<Note>
+  Caching `node_modules` can significantly speed up builds when dependencies don't change.
+</Note>
+
+### envVariables
+
+**Optional.** Set environment variables for the build.
+
+```yaml
+build:
+  envVariables:
+    NODE_ENV: production
+    API_URL: https://api.example.com
+    DB_HOST: db
+```
+
+## Runtime Configuration
+
+### base
+
+**Optional.** Set the Node.js version for runtime (defaults to build version).
+
+```yaml
+run:
+  base: nodejs@20
+```
+
+### ports
+
+**Optional.** Define which ports your app listens on.
+
+```yaml
+run:
+  ports:
+    - port: 3000
+      httpSupport: true
+    - port: 8080
+      protocol: TCP
+```
+
+Port configuration:
+- `port` - Port number (10-65435)
+- `protocol` - `TCP` (default) or `UDP`
+- `httpSupport` - Enable HTTP routing (default: true for TCP)
+
+<Info>
+  Other services in your project can access your app using `hostname:port` (e.g., `app:3000`).
+</Info>
+
+### prepareCommands
+
+**Optional.** Customize the runtime environment.
+
+```yaml
+run:
+  prepareCommands:
+    - apt-get update
+    - apt-get install -y imagemagick
+```
+
+These commands run once when creating the runtime container and are cached.
+
+### initCommands
+
+**Optional.** Run commands each time a container starts.
+
+```yaml
+run:
+  initCommands:
+    - rm -rf ./tmp/*
+    - mkdir -p ./uploads
+```
+
+<Warning>
+  Init commands delay container startup. Use `prepareCommands` for environment setup.
+</Warning>
+
+### start
+
+**Required.** Command to start your application.
+
+```yaml
+run:
+  start: npm start
+```
+
+Common start commands:
+
+<CodeGroup>
+```yaml npm
+start: npm start
+```
+
+```yaml node
+start: node server.js
+```
+
+```yaml pm2
+start: pm2-runtime start ecosystem.config.js
+```
+</CodeGroup>
+
+### envVariables
+
+**Optional.** Set runtime environment variables.
+
+```yaml
+run:
+  envVariables:
+    NODE_ENV: production
+    PORT: 3000
+    DB_HOST: db
+    DB_PASSWORD: ${db_password}  # Reference secret variable
+```
+
+### healthCheck
+
+**Optional.** Configure health checks.
+
+<Tabs>
+  <Tab title="HTTP Check">
+    ```yaml
+    run:
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /health
+          scheme: http
+    ```
+  </Tab>
+  
+  <Tab title="Command Check">
+    ```yaml
+    run:
+      healthCheck:
+        exec:
+          command: node health-check.js
+    ```
+  </Tab>
+</Tabs>
+
+## Complete Example
+
+Here's a production-ready configuration:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      os: alpine
+      
+      prepareCommands:
+        - npm install -g pnpm
+      
+      buildCommands:
+        - pnpm install --frozen-lockfile
+        - pnpm run build
+        - pnpm run test
+      
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      
+      cache:
+        - node_modules
+        - .pnpm-store
+      
+      envVariables:
+        NODE_ENV: production
+    
+    run:
+      base: nodejs@20
+      
+      ports:
+        - port: 3000
+          httpSupport: true
+      
+      initCommands:
+        - mkdir -p /var/www/tmp
+      
+      start: node dist/server.js
+      
+      envVariables:
+        NODE_ENV: production
+        PORT: 3000
+        DB_HOST: db
+        DB_PASSWORD: ${db_password}
+      
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /health
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deployment Process" icon="rocket" href="/runtimes/nodejs/deployment">
+    Learn how deployments work in Zerops.
+  </Card>
+  
+  <Card title="Scaling Configuration" icon="chart-line" href="/runtimes/nodejs/scaling">
+    Configure auto-scaling for your app.
+  </Card>
+</CardGroup>

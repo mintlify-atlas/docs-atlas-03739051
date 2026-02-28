@@ -1,0 +1,785 @@
+---
+title: Commands Reference
+description: Complete reference of all zCLI commands with flags, options, and examples
+---
+
+This page provides a comprehensive reference for all available commands in zCLI. For configuration options and environment variables, see the [Configuration guide](/cli/configuration).
+
+## Basic Usage
+
+```bash
+zcli <command> [flags]
+```
+
+<Tip>
+  All commands support the `-h, --help` flag which displays help information about the command.
+</Tip>
+
+## Command Groups
+
+<CardGroup cols={2}>
+  <Card title="Account & VPN" icon="key" href="#account--vpn">
+    Authentication and VPN connection management
+  </Card>
+  <Card title="Project Management" icon="folder" href="#project-management">
+    Create and manage projects
+  </Card>
+  <Card title="Service Operations" icon="server" href="#service-operations">
+    Deploy and manage services
+  </Card>
+  <Card title="Utility Commands" icon="wrench" href="#utility-commands">
+    Helper commands and tools
+  </Card>
+</CardGroup>
+
+---
+
+## Account & VPN
+
+### login
+
+Logs you into Zerops using a Personal Access Token.
+
+```bash
+zcli login <token>
+```
+
+<ParamField path="token" type="string" required>
+  Your Personal Access Token from [Access Token management](https://app.zerops.io/settings/token-management)
+</ParamField>
+
+**Example:**
+```bash
+zcli login eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### logout
+
+Disconnects from VPN and logs out from your Zerops account.
+
+```bash
+zcli logout
+```
+
+### vpn up
+
+Connects to the Zerops VPN, allowing secure access to your services.
+
+```bash
+zcli vpn up [project-id] [flags]
+```
+
+<ParamField path="project-id" type="string">
+  The ID of the project to connect to. Can also be set via configuration.
+</ParamField>
+
+**Flags:**
+
+<ParamField path="--auto-disconnect" type="boolean">
+  Automatically disconnect from VPN if already connected to another project
+</ParamField>
+
+<ParamField path="--mtu" type="integer" default="1420">
+  Set custom MTU value for Wireguard interface
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects (alternative to positional argument)
+</ParamField>
+
+**Example:**
+```bash
+# Connect using project ID
+zcli vpn up abc123def456
+
+# Connect with auto-disconnect
+zcli vpn up --auto-disconnect --project-id abc123def456
+
+# Connect with custom MTU
+zcli vpn up --mtu 1380 -P abc123def456
+```
+
+<Note>
+  You can set a default project ID in a `.zcli.yml` file or via the `ZEROPS_PROJECTID` environment variable to avoid specifying it each time.
+</Note>
+
+### vpn down
+
+Disconnects from the Zerops VPN.
+
+```bash
+zcli vpn down
+```
+
+---
+
+## Project Management
+
+### scope project
+
+Sets the default project scope for subsequent commands.
+
+```bash
+zcli scope project [project-id]
+```
+
+<ParamField path="project-id" type="string">
+  The ID of the project to set as default
+</ParamField>
+
+**Example:**
+```bash
+zcli scope project abc123def456
+```
+
+### scope reset
+
+Resets the project scope.
+
+```bash
+zcli scope reset
+```
+
+### project create
+
+Creates a new project in your Zerops organization.
+
+```bash
+zcli project create [flags]
+```
+
+**Flags:**
+
+<ParamField path="--env-isolation" type="string" default="service">
+  Environment isolation rule: `service` or `none`
+</ParamField>
+
+<ParamField path="--mode" type="string" default="light">
+  Project mode: `light` or `serious`
+</ParamField>
+
+<ParamField path="--name" type="string" required>
+  Project name
+</ParamField>
+
+<ParamField path="--org-id" type="string">
+  Organization ID (required if you belong to multiple organizations)
+</ParamField>
+
+<ParamField path="--out" type="string">
+  Output format using Go template syntax
+</ParamField>
+
+<ParamField path="--ssh-isolation" type="string" default="vpn">
+  SSH isolation rules
+</ParamField>
+
+<ParamField path="--tags" type="string[]">
+  Project tags (comma-separated or repeated flag)
+</ParamField>
+
+**Example:**
+```bash
+# Create a simple project
+zcli project create --name "My Project"
+
+# Create with tags and specific mode
+zcli project create --name "Production" --mode serious --tags prod,api
+```
+
+### project delete
+
+Deletes a project and all its services.
+
+```bash
+zcli project delete [project-id] [flags]
+```
+
+<ParamField path="project-id" type="string">
+  The ID of the project to delete
+</ParamField>
+
+**Flags:**
+
+<ParamField path="--confirm" type="boolean">
+  Skip confirmation prompts for destructive operations
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<Warning>
+  This operation is irreversible. All services and data in the project will be permanently deleted.
+</Warning>
+
+**Example:**
+```bash
+# Delete with confirmation prompt
+zcli project delete abc123def456
+
+# Delete without confirmation
+zcli project delete --confirm --project-id abc123def456
+```
+
+### project env
+
+Displays environment variables for the current project scope.
+
+```bash
+zcli project env [flags]
+```
+
+**Flags:**
+
+<ParamField path="--export" type="boolean">
+  Prepends `export` keyword to each environment variable in output
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="--service" type="string">
+  Service name to get environment variables in its context
+</ParamField>
+
+<ParamField path="--template" type="string" default="{{.Key}}={{.Value}}">
+  Output template
+</ParamField>
+
+<ParamField path="--user-only" type="boolean">
+  Exclude all non-user environment variables
+</ParamField>
+
+**Example:**
+```bash
+# List all environment variables
+zcli project env
+
+# Export format for shell
+zcli project env --export
+
+# User-defined variables only
+zcli project env --user-only --service my-app
+```
+
+### project list
+
+Lists all projects you have access to.
+
+```bash
+zcli project list
+```
+
+**Example output:**
+```
+ID              NAME            STATUS
+abc123def456    My Project      active
+ghi789jkl012    Test Project    active
+```
+
+### project project-import
+
+Creates a new project with one or more services from a YAML definition.
+
+```bash
+zcli project project-import <importYamlPath> [flags]
+```
+
+<ParamField path="importYamlPath" type="string" required>
+  Path to the YAML file containing project definition
+</ParamField>
+
+**Flags:**
+
+<ParamField path="--org-id" type="string">
+  Organization ID (required if you belong to multiple organizations)
+</ParamField>
+
+<ParamField path="--working-dir" type="string" default="./">
+  Sets a custom working directory
+</ParamField>
+
+**Example:**
+```bash
+zcli project project-import ./project-definition.yml
+```
+
+### project service-import
+
+Creates one or more services in an existing project from a YAML definition.
+
+```bash
+zcli project service-import <importYamlPath> [flags]
+```
+
+<ParamField path="importYamlPath" type="string" required>
+  Path to the YAML file containing service definitions
+</ParamField>
+
+**Flags:**
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+**Example:**
+```bash
+zcli project service-import ./services.yml --project-id abc123def456
+```
+
+---
+
+## Service Operations
+
+### service list
+
+Lists all services in a project.
+
+```bash
+zcli service list [flags]
+```
+
+**Flags:**
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+**Example:**
+```bash
+zcli service list --project-id abc123def456
+```
+
+### service create
+
+Creates a new service in a project.
+
+```bash
+zcli service create [flags]
+```
+
+**Flags:**
+
+<ParamField path="--env" type="string[]">
+  Environment variables to set (comma-separated or repeated flag)
+</ParamField>
+
+<ParamField path="--env-file" type="string">
+  File containing environment variables (max 1.0 MiB)
+</ParamField>
+
+<ParamField path="--env-isolation" type="string" default="service">
+  Environment isolation rule: `service` or `none`
+</ParamField>
+
+<ParamField path="--mode" type="string" default="non_ha">
+  Service mode: `ha` (high availability) or `non_ha`
+</ParamField>
+
+<ParamField path="--name" type="string" required>
+  Service name
+</ParamField>
+
+<ParamField path="--noop" type="boolean">
+  Creates service only if none with the same name exists
+</ParamField>
+
+<ParamField path="--out" type="string">
+  Output format using Go template syntax
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="--ssh-isolation" type="string" default="vpn">
+  SSH isolation rules
+</ParamField>
+
+<ParamField path="--start-without-code" type="boolean">
+  Start service immediately without deployment
+</ParamField>
+
+<ParamField path="--working-dir" type="string" default="./">
+  Sets custom working directory
+</ParamField>
+
+<ParamField path="--zerops-yaml-path" type="string">
+  Sets custom path to zerops.yml file
+</ParamField>
+
+**Example:**
+```bash
+# Create a basic service
+zcli service create --name my-app --project-id abc123def456
+
+# Create with environment variables
+zcli service create --name my-app --env "DB_HOST=localhost,DB_PORT=5432" -P abc123def456
+
+# Create high availability service
+zcli service create --name my-api --mode ha --project-id abc123def456
+```
+
+### service push
+
+Builds your application in Zerops and deploys it. This is the recommended way to deploy.
+
+```bash
+zcli service push [service-id-or-name] [flags]
+```
+
+<ParamField path="service-id-or-name" type="string">
+  The service ID or name to push to
+</ParamField>
+
+**Flags:**
+
+<ParamField path="--archive-file-path" type="string">
+  Creates a tar.gz archive with application code at the specified path
+</ParamField>
+
+<ParamField path="-g, --deploy-git-folder" type="boolean">
+  Include the .git folder in the upload
+</ParamField>
+
+<ParamField path="--disable-logs" type="boolean">
+  Disable logs during push
+</ParamField>
+
+<ParamField path="--no-git" type="boolean">
+  Upload entire working directory as-is (cannot be combined with --workspace-state or --deploy-git-folder)
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Required when you have access to multiple services
+</ParamField>
+
+<ParamField path="--setup" type="string">
+  Choose which setup to use from zerops.yml
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Log additional debug data to the debug log file
+</ParamField>
+
+<ParamField path="--version-name" type="string">
+  Adds a custom version name for this deployment
+</ParamField>
+
+<ParamField path="--working-dir" type="string" default="./">
+  Sets a custom working directory
+</ParamField>
+
+<ParamField path="-w, --workspace-state" type="string" default="all">
+  Defines which files to push:
+  - `clean` - pushes the HEAD without local changes
+  - `staged` - pushes only staged files
+  - `all` - pushes all staged and unstaged files (default)
+</ParamField>
+
+<ParamField path="--zerops-yaml-path" type="string">
+  Sets a custom path to the zerops.yml file
+</ParamField>
+
+**Examples:**
+```bash
+# Simple push (uses defaults from config)
+zcli push
+
+# Push with service ID
+zcli service push --service-id xyz789abc123
+
+# Push only staged changes
+zcli push --workspace-state staged
+
+# Push with custom version name
+zcli push --version-name "v1.2.3"
+
+# Verbose push for debugging
+zcli push -v
+```
+
+<Tip>
+  You can use `zcli push` as a shorthand for `zcli service push`.
+</Tip>
+
+<Note>
+  To avoid specifying `--project-id` and `--service-id` repeatedly, set defaults in a `.zcli.yml` file or via environment variables. See the [Configuration guide](/cli/configuration).
+</Note>
+
+### service deploy
+
+Deploys your application to Zerops (similar to push but deployment-focused).
+
+```bash
+zcli service deploy [service-id-or-name] [flags]
+```
+
+**Flags:** Same as [`service push`](#service-push)
+
+### service start / service stop
+
+Starts or stops a Zerops service.
+
+```bash
+zcli service start [service-id-or-name] [flags]
+zcli service stop [service-id-or-name] [flags]
+```
+
+<ParamField path="service-id-or-name" type="string">
+  The service ID or name to start/stop
+</ParamField>
+
+**Flags:**
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Required when you have access to multiple services
+</ParamField>
+
+**Example:**
+```bash
+# Start a service
+zcli service start my-app
+
+# Stop a service
+zcli service stop --service-id xyz789abc123
+```
+
+### service delete
+
+Deletes a Zerops service.
+
+```bash
+zcli service delete [service-id-or-name] [flags]
+```
+
+<ParamField path="service-id-or-name" type="string">
+  The service ID or name to delete
+</ParamField>
+
+**Flags:**
+
+<ParamField path="--confirm" type="boolean">
+  Skip confirmation prompts
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Required when you have access to multiple services
+</ParamField>
+
+<Warning>
+  This operation is irreversible. All service data will be permanently deleted.
+</Warning>
+
+### service enable-subdomain
+
+Enables access to your service through a Zerops subdomain.
+
+```bash
+zcli service enable-subdomain [service-id-or-name] [flags]
+```
+
+<ParamField path="service-id-or-name" type="string">
+  The service ID or name
+</ParamField>
+
+**Flags:**
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Required when you have access to multiple services
+</ParamField>
+
+### service log
+
+Streams service runtime or build logs to stdout.
+
+```bash
+zcli service log [flags]
+```
+
+**Flags:**
+
+<ParamField path="--follow" type="boolean">
+  Continuously poll for new log messages (like `tail -f`)
+</ParamField>
+
+<ParamField path="--format" type="string" default="FULL">
+  Log output format: `FULL`, `SHORT`, `JSON`, or `JSONSTREAM`
+</ParamField>
+
+<ParamField path="--format-template" type="string">
+  Custom log format template
+</ParamField>
+
+<ParamField path="--limit" type="integer" default="100">
+  Number of recent log messages to return (1–1000)
+</ParamField>
+
+<ParamField path="--message-type" type="string" default="APPLICATION">
+  Select log type: `APPLICATION` or `WEBSERVER`
+</ParamField>
+
+<ParamField path="--minimum-severity" type="string">
+  Filter by minimum severity level
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Required when you have access to multiple projects
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Required when you have access to multiple services
+</ParamField>
+
+<ParamField path="--show-build-logs" type="boolean">
+  Show build logs instead of runtime logs
+</ParamField>
+
+**Examples:**
+```bash
+# Stream logs in real-time
+zcli service log --follow
+
+# Get last 500 application logs
+zcli service log --limit 500
+
+# View build logs
+zcli service log --show-build-logs
+
+# JSON format for parsing
+zcli service log --format JSON --limit 100
+```
+
+---
+
+## Utility Commands
+
+### env
+
+Displays global environment variables and their paths.
+
+```bash
+zcli env
+```
+
+### version
+
+Shows the current zCLI version.
+
+```bash
+zcli version
+```
+
+**Example output:**
+```
+zcli version 1.10.0
+```
+
+### show-debug-logs
+
+Displays debug logs for troubleshooting.
+
+```bash
+zcli show-debug-logs
+```
+
+This shows the contents of the zCLI debug log file. See the [Configuration guide](/cli/configuration#logging-configuration) for log file locations.
+
+### support
+
+Displays information about how to contact Zerops support.
+
+```bash
+zcli support
+```
+
+### completion
+
+Generates shell autocompletion scripts.
+
+```bash
+zcli completion {bash|fish|powershell|zsh}
+```
+
+<ParamField path="shell" type="string" required>
+  Shell type: `bash`, `fish`, `powershell`, or `zsh`
+</ParamField>
+
+**Examples:**
+
+<CodeGroup>
+
+```bash Bash
+zcli completion bash > ~/.zerops-completion.bash
+echo 'source ~/.zerops-completion.bash' >> ~/.bashrc
+source ~/.bashrc
+```
+
+```bash Zsh
+zcli completion zsh > ~/.zerops-completion.zsh
+echo 'source ~/.zerops-completion.zsh' >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash Fish
+zcli completion fish > ~/.config/fish/completions/zcli.fish
+```
+
+```powershell PowerShell
+zcli completion powershell | Out-File -FilePath $PROFILE -Append
+```
+
+</CodeGroup>
+
+---
+
+## Global Flags
+
+These flags are available for most commands:
+
+<ParamField path="-h, --help" type="boolean">
+  Display help information for the command
+</ParamField>
+
+<ParamField path="-P, --project-id" type="string">
+  Specify project ID (can be set via config or environment variable)
+</ParamField>
+
+<ParamField path="-S, --service-id" type="string">
+  Specify service ID (can be set via config or environment variable)
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Enable verbose output with additional debug information
+</ParamField>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Learn how to configure default values and environment variables
+  </Card>
+  <Card title="CLI Overview" icon="terminal" href="/cli/overview">
+    Back to CLI overview and quick start
+  </Card>
+</CardGroup>

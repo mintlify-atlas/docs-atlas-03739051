@@ -1,0 +1,262 @@
+---
+title: Alpine Linux
+description: Lightweight, security-oriented Alpine Linux containers for resource-efficient custom applications in Zerops.
+---
+
+[Alpine Linux](https://alpinelinux.org/) is a lightweight, security-oriented Linux distribution based on musl libc and busybox, known for its small footprint and efficiency.
+
+Alpine services in Zerops provide a minimal base environment for running applications built with technologies that aren't officially supported by Zerops, or for custom setups requiring full control over the runtime environment while keeping resource usage low.
+
+## Why Alpine?
+
+Alpine Linux is ideal when you need:
+
+- **Minimal Resource Footprint** - Smaller image sizes and lower memory usage
+- **Security Focus** - Reduced attack surface with minimal packages
+- **Fast Boot Times** - Lightweight design enables quicker container startup
+- **Efficient Scaling** - Less overhead means more instances per host
+
+## Getting Started
+
+Alpine services give you a minimal foundation to build upon. You can:
+
+- Install packages using the `apk` package manager
+- Configure custom runtime environments
+- Run applications in languages not natively supported by Zerops
+- Create resource-efficient containerized applications
+
+### Creating an Alpine Service
+
+You can create an Alpine service using:
+
+1. **Zerops GUI** - Through the web interface when adding a new service
+2. **zCLI** - Using the command-line interface
+
+### Configuration Example
+
+```yaml
+services:
+  - hostname: app
+    type: alpine@3.20
+```
+
+## Build and Runtime Configuration
+
+### Customize Build Environment
+
+Use the build phase to install dependencies and prepare your application:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: alpine@3.20
+      buildCommands:
+        - apk update
+        - apk add --no-cache python3 py3-pip
+        - pip3 install -r requirements.txt
+      deployFiles:
+        - app/
+        - requirements.txt
+```
+
+### Customize Runtime Environment
+
+Configure how your application runs:
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: alpine@3.20
+      prepareCommands:
+        - apk update
+        - apk add --no-cache python3
+      start: python3 app/main.py
+      ports:
+        - port: 8080
+          httpSupport: true
+```
+
+## Package Management
+
+Alpine uses the `apk` package manager. Common commands:
+
+```bash
+# Update package index
+apk update
+
+# Install packages
+apk add --no-cache package-name
+
+# Search for packages
+apk search package-name
+
+# Remove packages
+apk del package-name
+```
+
+<Tip>
+Use `--no-cache` flag to avoid caching package indexes, keeping images smaller.
+</Tip>
+
+## Scaling Configuration
+
+Alpine services support both horizontal and vertical scaling:
+
+```yaml
+zerops:
+  - setup: app
+    # ... other config
+    verticalAutoscaling:
+      minCpu: 1
+      maxCpu: 5
+      minRam: 0.25  # Alpine can run efficiently with less RAM
+      maxRam: 2
+    horizontalAutoscaling:
+      minContainers: 1
+      maxContainers: 5
+```
+
+## Use Cases
+
+Alpine services are ideal for:
+
+- **Microservices** - Lightweight containers for service-oriented architectures
+- **API Services** - Minimal overhead for high-performance APIs
+- **CLI Tools** - Small container images for utility applications
+- **Edge Computing** - Resource-constrained environments
+- **Cost Optimization** - Lower resource usage reduces hosting costs
+
+## Common Patterns
+
+### Installing Build Dependencies
+
+```yaml
+build:
+  buildCommands:
+    - apk update
+    - apk add --no-cache build-base curl git
+    # Your build steps
+    - make build
+    # Clean up build dependencies if not needed at runtime
+    - apk del build-base
+```
+
+### Node.js Application
+
+```yaml
+build:
+  buildCommands:
+    - apk update
+    - apk add --no-cache nodejs npm
+    - npm install --production
+  deployFiles:
+    - package.json
+    - node_modules/
+    - src/
+run:
+  start: node src/index.js
+```
+
+### Python Application
+
+```yaml
+build:
+  buildCommands:
+    - apk update
+    - apk add --no-cache python3 py3-pip
+    - pip3 install --no-cache-dir -r requirements.txt
+  deployFiles:
+    - requirements.txt
+    - app/
+run:
+  start: python3 app/main.py
+```
+
+### Go Application
+
+```yaml
+build:
+  buildCommands:
+    - apk update
+    - apk add --no-cache go
+    - go build -o app main.go
+  deployFiles:
+    - app
+run:
+  start: ./app
+```
+
+## Alpine vs Ubuntu
+
+| Feature | Alpine | Ubuntu |
+|---------|--------|--------|
+| Image Size | ~5-7 MB base | ~30-40 MB base |
+| Package Manager | apk | apt |
+| C Library | musl libc | glibc |
+| Package Availability | Smaller repository | Larger repository |
+| Resource Usage | Lower | Higher |
+| Boot Time | Faster | Slower |
+
+<Note>
+Some applications compiled for glibc may require modifications to run on Alpine's musl libc. Test thoroughly when migrating from Ubuntu to Alpine.
+</Note>
+
+## Best Practices
+
+### Performance
+
+- Use multi-stage builds to keep final images small
+- Install only necessary runtime packages
+- Use `--no-cache` flag with `apk add` to avoid caching
+- Remove build dependencies after compilation
+
+### Security
+
+- Keep packages updated with `apk update && apk upgrade`
+- Remove unnecessary packages
+- Use specific version tags for reproducible builds
+- Run applications as non-root user when possible
+
+### Maintainability
+
+- Document all installed packages and their purpose
+- Pin package versions for stability
+- Test compatibility with musl libc
+- Keep build and runtime configurations separate
+
+## Troubleshooting
+
+### Missing Packages
+
+If a package is not available in Alpine repositories:
+
+1. Search the [Alpine package database](https://pkgs.alpinelinux.org/packages)
+2. Check if it's in a different repository (edge, community)
+3. Consider building from source
+4. Use a Ubuntu service if the package is critical
+
+### musl libc Compatibility
+
+Some pre-compiled binaries expect glibc. Solutions:
+
+1. Find an Alpine-compatible version
+2. Compile from source on Alpine
+3. Use a compatibility layer (not recommended)
+4. Switch to Ubuntu service if necessary
+
+## Popular Guides
+
+- [zCLI](/references/cli) - Command-line tool for managing Zerops services
+- [Zerops VPN](/references/networking/vpn) - Securely connect to your services
+- [Environment Variables](/features/env-variables) - Configure your application
+- [Scaling](/features/scaling-ha) - Optimize resource usage
+
+## Support
+
+Need help getting started with Alpine services?
+
+- Join our [Discord community](https://discord.com/invite/WDvCZ54) - Get help from our team and other members
+- Check the documentation for specific how-to guides
+- Share your knowledge and help others in the community

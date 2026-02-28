@@ -1,0 +1,240 @@
+---
+title: Create PostgreSQL Service
+description: Create and configure a PostgreSQL database service in Zerops using GUI or zCLI.
+---
+
+## Create PostgreSQL using Zerops GUI
+
+First, set up a project in Zerops GUI. Then go to the project dashboard page and choose **Add new service** in the left menu in the **Services** block.
+
+### Choose PostgreSQL version
+
+Select from the currently supported PostgreSQL versions. The available versions are displayed in the service creation wizard.
+
+### Set a hostname
+
+Enter a unique service identifier like `postgresql`, `sql`, `db` etc.
+
+<Warning>
+**Hostname limitations:**
+- Duplicate services with the same name within the same project are not allowed
+- Maximum 25 characters
+- Must contain only lowercase ASCII letters (a-z) or numbers (0-9)
+- **The hostname is fixed after the service is created and cannot be changed later**
+</Warning>
+
+### Configure auto scaling
+
+Zerops automatically scales PostgreSQL services based on actual database usage. Configure the scaling parameters to match your database needs and control costs.
+
+**CPU Mode**: Choose between shared (cost-effective) or dedicated (consistent performance).
+
+**Resource Limits**: Set minimum and maximum resources for CPU, RAM, and disk to control costs and ensure performance.
+
+**Deployment Mode**: Choose the reliability configuration for your PostgreSQL service:
+
+- **Highly Available**: Multiple containers with redundancy across different physical machines. Recommended for production environments.
+- **Single Container**: One container suitable for development and non-critical environments.
+
+<Warning>
+Deployment mode cannot be changed after service creation.
+</Warning>
+
+<Tip>
+For detailed scaling configuration, deployment mode details, and troubleshooting, see:
+- [How Zerops scales PostgreSQL](/postgresql/how-to/scale) - Database-specific scaling guide
+- [Automatic Scaling and High Availability](/features/scaling) - Complete technical details
+</Tip>
+
+## Create PostgreSQL using zCLI
+
+zCLI is the Zerops command-line tool. To create a new PostgreSQL service via the command line, follow these steps:
+
+<Steps>
+  <Step title="Install & setup zCLI">
+    [Install and configure zCLI](/references/cli) if you haven't already.
+  </Step>
+  
+  <Step title="Create a project description file">
+    Create a YAML file describing your project infrastructure.
+  </Step>
+  
+  <Step title="Import the project">
+    Run the import command to create your project and PostgreSQL service.
+  </Step>
+</Steps>
+
+### Create a project description file
+
+Zerops uses a YAML format file to describe the project infrastructure.
+
+#### Basic example
+
+Create a directory `my-project`. Create a `description.yaml` file inside the directory with the following content:
+
+```yaml
+# Basic project data
+project:
+  # project name
+  name: my-project
+# array of project services
+services:
+  - # service name
+    hostname: postgresql1
+    # service type and version number in postgresql@{version} format
+    type: postgresql@12
+    # mode of operation "HA"/"NON_HA"
+    mode: NON_HA
+```
+
+The YAML file describes your future project infrastructure. The project will contain one PostgreSQL service in the single container mode with default auto scaling configuration. The hostname will be set to `postgresql1`.
+
+#### Full example
+
+Create a directory `my-project`. Create a `description.yaml` file inside the directory with the following content:
+
+```yaml
+# Basic project data
+project:
+  # project name
+  name: my-project
+  # optional: project description
+  description: A project with a PostgreSQL database
+  # optional: project tags
+  tags:
+    - DEMO
+    - ZEROPS
+# array of project services
+services:
+  - # first service hostname
+    hostname: postgresql1
+    # service type and version number in postgresql@{version} format
+    type: postgresql@12
+    # mode of operation "HA"/"NON_HA"
+    mode: HA
+    # optional: vertical auto-scaling customization
+    verticalAutoscaling:
+      cpuMode: DEDICATED
+      minCpu: 2
+      maxCpu: 5
+      minRam: 2
+      maxRam: 24
+      minDisk: 6
+      maxDisk: 50
+      startCpuCoreCount: 3
+      minFreeRamGB: 0.5
+      minFreeRamPercent: 20
+  - # second service hostname
+    hostname: postgresql2
+    # service type and version number in postgresql@{version} format
+    type: postgresql@12
+    # mode of operation "HA"/"non_HA"
+    mode: NON_HA
+```
+
+The YAML file describes your future project infrastructure. The project will contain two PostgreSQL services.
+
+The hostname of the first service will be set to `postgresql1`. The high availability mode will be chosen and the custom auto scaling configuration will be set.
+
+The hostname of the second service will be set to `postgresql2`. The single container mode will be chosen and the default auto scaling configuration will be set.
+
+### Description of description.yaml parameters
+
+#### Project section
+
+The `project:` section is required. Only one project can be defined.
+
+| Parameter | Description | Limitations |
+|-----------|-------------|-------------|
+| **name** | The name of the new project. Duplicates are allowed. | |
+| **description** | **Optional.** Description of the new project. | Maximum 255 characters. |
+| **tags** | **Optional.** One or more string tags. Tags do not have a functional meaning, they only provide better orientation in projects. | |
+
+#### Services section
+
+At least one service in the `services:` section is required. You can create a project with multiple services.
+
+| Parameter | Description |
+|-----------|-------------|
+| **hostname** | The unique service identifier. The hostname of the new database will be set to the `hostname` value.<br/><br/>**Limitations:**<br/>- duplicate services with the same name in the same project are forbidden<br/>- maximum 25 characters<br/>- must contain only lowercase ASCII letters (a-z) or numbers (0-9) |
+| **type** | Specifies the service type and version. See what [PostgreSQL service types](/references/import-yaml/type-list#database-services) are currently supported. |
+| **mode** | Defines the operation mode of the PostgreSQL service.<br/><br/>**HA**<br/>Creates a PostgreSQL cluster with 3 database containers and 2 free database proxies. This mode is suited for production.<br/><br/>Zerops always keeps the 3 database containers on different physical machines. All your data is stored redundantly in 3 identical copies. In case of a failure of a container or the underlying physical machine, Zerops automatically disconnects the failed container from the cluster, creates a new container and syncs all data from the remaining 2 copies. Finally, the broken container is automatically deleted.<br/><br/>In HA mode, a dedicated read replica port (`5433`) is available, allowing you to route read queries to replicas for better performance.<br/><br/>**NON_HA**<br/>Zerops will create a PostgreSQL database installed in a single container. Useful for non-essential data or dev environments.<br/><br/>Your data is stored only in a single container. If the container or the underlying physical machine fails, your data since the last backup are lost. Zerops doesn't provide any automatic repairs of a single node PostgreSQL services. |
+| **verticalAutoscaling** | **Optional.** Defines custom vertical auto-scaling parameters. All verticalAutoscaling attributes are optional. Not specified attributes will be set to their default values. |
+| **- cpuMode** | **Optional.** Accepts `SHARED`, `DEDICATED` values. Default is `SHARED` |
+| **- minCpu/maxCpu** | **Optional.** Set the minCpu or maxCpu in CPU cores (integer). |
+| **- minRam/maxRam** | **Optional.** Set the minRam or maxRam in GB (float). |
+| **- minDisk/maxDisk** | **Optional.** Set the minDisk or maxDisk in GB (float). |
+
+<Warning>
+The PostgreSQL service **hostname** and **mode** are fixed after the service is created. They can't be changed later.
+</Warning>
+
+### Create a project based on the description.yaml
+
+When you have your `description.yaml` ready, use the `zcli project project-import` command to create a new project and the service infrastructure.
+
+```sh
+Usage:
+  zcli project project-import importYamlPath [flags]
+
+Flags:
+  -h, --help                Help for the project import command.
+      --org-id string        If you have access to more than one organization, you must specify the org ID for which the
+                            project will be created.
+      --working-dir string   Sets a custom working directory. The default working directory is the current directory. (default "./")
+```
+
+Zerops will create a project and one or more services based on the `description.yaml` content.
+
+The maximum size of the `description.yaml` file is 100 kB.
+
+You don't specify the project name in the `zcli project project-import` command, because the project name is defined in the `description.yaml`.
+
+If you have access to more than one client, you must specify the client ID for which the project is to be created. The `clientID` is located in the Zerops GUI under the client name on the project dashboard page.
+
+### Add PostgreSQL service to an existing project
+
+Create a directory `my-project` if it doesn't exist. Create an `import.yaml` file inside the `my-project` directory with following content:
+
+```yaml
+# array of project services
+services:
+  - # service name
+    hostname: postgresql1
+    # service type and version number in postgresql@{version} format
+    type: postgresql@12
+    # mode of operation "HA"/"NON_HA"
+    mode: NON_HA
+```
+
+The YAML file describes the list of one or more services that you want to add to your existing project. In the example above, one PostgreSQL service in the single container mode with default auto scaling configuration will be added to your project. The hostname of the new service will be set to `postgresql1`.
+
+The content of the `services:` section of `import.yaml` is identical to the project description file. The `import.yaml` never contains the `project:` section because the project already exists.
+
+When your `import.yaml` is ready, use the `zcli project service-import` command to add one or more services to your existing Zerops project.
+
+```sh
+Usage:
+  zcli project service-import importYamlPath [flags]
+
+Flags:
+  -h, --help                Help for the project service import command.
+  -P, --project-id string   If you have access to more than one project, you must specify the project ID for which the
+                           command will be executed.
+```
+
+zCLI commands are interactive, when you press enter after `zcli project service-import importYamlPath`, you will be given a list of your projects to choose from.
+
+The maximum size of the `import.yaml` file is 100 kB.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Connect to PostgreSQL" icon="link" href="/services/postgresql/connect">
+    Learn how to connect from your applications
+  </Card>
+  
+  <Card title="Manage Users & Databases" icon="database" href="/services/postgresql/manage">
+    Create and manage users, databases, and plugins
+  </Card>
+</CardGroup>

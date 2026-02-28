@@ -1,0 +1,132 @@
+---
+title: Valkey
+description: Production-ready Valkey in-memory data store with managed infrastructure and automatic security configuration. Deploy and run with zero operational overhead.
+---
+
+Valkey is a powerful, open-source alternative to Redis, offering full compatibility with Redis clients while providing an independent development path focused on community-driven innovation. Deploy and manage Valkey in Zerops' fully managed infrastructure to get instant access to high-performance in-memory data storage.
+
+<Tip>
+Valkey is our recommended Redis alternative as KeyDB's development has slowed significantly in recent times.
+</Tip>
+
+## Supported Versions
+
+Zerops currently supports Valkey versions **7** and **8**.
+
+When importing a service, use version format:
+- `valkey@7`
+- `valkey@8`
+
+## Service Configuration
+
+Zerops offers Valkey in two deployment configurations to meet different availability requirements.
+
+### Non-HA Setup
+
+- Single node deployment on port `6379` (non-TLS) and `6380` (TLS)
+- No backup mechanism beyond Zerops infrastructure reliability
+- Data persists unless the hardware node fails
+- Suitable for development or non-critical workloads
+
+### HA (High Availability) Setup
+
+Our HA implementation uses a unique approach to ensure high availability while maintaining compatibility with all Redis clients:
+
+#### Architecture
+
+- 3-node configuration (1 master + 2 replicas)
+- All nodes are configured identically and listen on standard ports
+- First node in the cluster is designated as the master
+
+#### Access Ports
+
+- **Port 6379** - Read/write operations (non-TLS, routed to master)
+- **Port 6380** - Read/write operations over TLS (routed to master)
+- **Port 7000** - Read-only operations (non-TLS)
+- **Port 7001** - Read-only operations over TLS
+
+#### Implementation Details
+
+- On replica nodes, ports `6379`/`6380` traffic is forwarded to the master
+- Ports `7000`/`7001` are mapped locally to each node for direct replica access
+- When a master fails, a replica is promoted and routing is updated automatically
+- DNS entries are updated for seamless client connection
+- This implementation provides traffic forwarding to master (not natively supported by Valkey)
+
+<Note>
+Be aware that replica data may lag slightly behind the master due to asynchronous replication.
+</Note>
+
+## Connection Examples
+
+### Connecting from Node.js
+
+```javascript
+import { createClient } from 'redis';
+
+const client = createClient({
+  url: `redis://${process.env.hostname}:6379`
+});
+
+await client.connect();
+
+// Set a key
+await client.set('key', 'value');
+
+// Get a key
+const value = await client.get('key');
+console.log(value); // 'value'
+```
+
+### Connecting with TLS
+
+```javascript
+const client = createClient({
+  url: `redis://${process.env.hostname}:6380`,
+  socket: {
+    tls: true,
+    rejectUnauthorized: false
+  }
+});
+```
+
+## Use Cases
+
+Valkey excels in scenarios requiring:
+
+- **Session Management** - Store user sessions with fast read/write access
+- **Caching Layer** - Reduce database load by caching frequently accessed data
+- **Real-time Analytics** - Track metrics and counters with high throughput
+- **Message Queues** - Implement pub/sub patterns for event-driven architectures
+- **Rate Limiting** - Control API request rates with expiring keys
+
+## Best Practices
+
+### Data Persistence
+
+- Use HA mode for production workloads requiring data durability
+- Implement application-level retry logic for transient failures
+- Consider replication lag when reading from replicas
+
+### Performance
+
+- Use pipelining for bulk operations to reduce round trips
+- Set appropriate TTL values to manage memory usage
+- Monitor memory consumption and adjust instance size as needed
+
+### Security
+
+- Use TLS ports (6380/7001) for encrypted connections
+- Store connection details in environment variables
+- Implement authentication in production environments
+
+## Learn More
+
+- [Official Valkey Documentation](https://valkey.io/docs) - Comprehensive guide to Valkey features
+- [Redis Compatibility](https://valkey.io/docs/) - Understanding Valkey's Redis compatibility
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)

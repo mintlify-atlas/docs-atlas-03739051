@@ -1,122 +1,191 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Zerops",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#18b69b",
+    "light": "#4dd4bd",
+    "dark": "#159b84"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/zeropsio/docs"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/zeropsio/docs",
+      "x": "https://x.com/zeropsio",
+      "discord": "https://discord.com/invite/WDvCZ54"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "features/infrastructure",
+              "features/pipeline",
+              "features/scaling",
+              "features/access",
+              "features/rbac",
+              "features/env-variables",
+              "features/backup",
+              "features/cdn",
+              "features/build-cache",
+              "features/debug-mode",
+              "features/container-vs-vm"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Configuration",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "zerops-yaml/overview",
+              "zerops-yaml/specification",
+              "references/import",
+              "references/cli"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Runtimes",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "JavaScript Runtimes",
             "pages": [
-              "api-reference/introduction"
+              "runtimes/nodejs/overview",
+              "runtimes/nodejs/quickstart",
+              "runtimes/nodejs/build-pipeline",
+              "runtimes/nodejs/deployment",
+              "runtimes/nodejs/scaling",
+              "runtimes/deno/overview",
+              "runtimes/deno/quickstart",
+              "runtimes/bun/overview",
+              "runtimes/bun/quickstart"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Backend Languages",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "runtimes/php/overview",
+              "runtimes/php/quickstart",
+              "runtimes/python/overview",
+              "runtimes/python/quickstart",
+              "runtimes/go/overview",
+              "runtimes/go/quickstart",
+              "runtimes/rust/overview",
+              "runtimes/rust/quickstart",
+              "runtimes/java/overview",
+              "runtimes/java/quickstart",
+              "runtimes/dotnet/overview",
+              "runtimes/dotnet/quickstart",
+              "runtimes/elixir/overview",
+              "runtimes/elixir/quickstart",
+              "runtimes/gleam/overview",
+              "runtimes/gleam/quickstart"
+            ]
+          },
+          {
+            "group": "Web Servers & Static",
+            "pages": [
+              "runtimes/nginx/overview",
+              "runtimes/nginx/quickstart",
+              "runtimes/static/overview",
+              "runtimes/static/quickstart"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Services",
+        "groups": [
+          {
+            "group": "Databases",
+            "pages": [
+              "services/postgresql/overview",
+              "services/postgresql/create",
+              "services/postgresql/connect",
+              "services/postgresql/manage",
+              "services/postgresql/backup",
+              "services/mariadb/overview",
+              "services/mariadb/create",
+              "services/mariadb/connect"
+            ]
+          },
+          {
+            "group": "Caching & Key-Value",
+            "pages": [
+              "services/valkey/overview",
+              "services/keydb/overview"
+            ]
+          },
+          {
+            "group": "Search Engines",
+            "pages": [
+              "services/elasticsearch/overview",
+              "services/typesense/overview",
+              "services/meilisearch/overview",
+              "services/qdrant/overview"
+            ]
+          },
+          {
+            "group": "Message Brokers",
+            "pages": [
+              "services/kafka/overview",
+              "services/nats/overview"
+            ]
+          },
+          {
+            "group": "Containers",
+            "pages": [
+              "services/docker/overview",
+              "services/ubuntu/overview",
+              "services/alpine/overview"
+            ]
+          },
+          {
+            "group": "Storage",
+            "pages": [
+              "services/object-storage/overview",
+              "services/shared-storage/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/endpoints"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "cli/overview",
+              "cli/installation",
+              "cli/commands",
+              "cli/configuration"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

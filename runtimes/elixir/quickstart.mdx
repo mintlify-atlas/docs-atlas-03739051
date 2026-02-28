@@ -1,0 +1,64 @@
+---
+title: Elixir Quickstart
+description: Deploy your first Elixir application on Zerops.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Elixir installed locally
+
+## Deploy from Recipe
+
+<Steps>
+  <Step title="Import Project">
+    ```yaml
+    project:
+      name: recipe-elixir
+    services:
+      - hostname: api
+        type: elixir@1.16
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-elixir
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+    ```
+  </Step>
+</Steps>
+
+## Create Phoenix App
+
+```bash
+mix phx.new myapp
+cd myapp
+```
+
+### Add zerops.yaml
+
+```yaml
+zerops:
+  - setup: web
+    build:
+      base: elixir@1.16
+      buildCommands:
+        - mix local.hex --force
+        - mix local.rebar --force
+        - mix deps.get
+        - mix compile
+      deployFiles: .
+    run:
+      start: mix phx.server
+      ports:
+        - port: 4000
+      envVariables:
+        MIX_ENV: prod
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="book" href="/runtimes/elixir/overview">
+    Runtime features
+  </Card>
+</CardGroup>

@@ -1,80 +1,330 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart Guide
+description: Deploy your first application on Zerops in under 5 minutes
 ---
 
-## Get started in three steps
+This quickstart guide will walk you through deploying a complete Node.js application with PostgreSQL database on Zerops. You'll go from zero to a running application with just a few clicks—no complex configuration required.
 
-Get your documentation site running locally and make your first customization.
+## What You'll Deploy
 
-### Step 1: Set up your local environment
+You'll deploy a simple Node.js web application that:
+- Connects to a PostgreSQL database
+- Exposes a REST API endpoint
+- Runs on a production-ready infrastructure with automatic scaling
+- Gets a public subdomain for instant access
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+The entire stack will be configured, built, and deployed automatically.
 
-### Step 2: Deploy your changes
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+All you need is:
+- A web browser
+- 5 minutes of your time
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+No credit card required for initial testing.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Create Your Zerops Account">
+    Navigate to the [Zerops GUI](https://app.zerops.io) and sign up for a free account.
 
-### Step 3: Go live
+    You can register using:
+    - Email and password
+    - GitHub account
+    - GitLab account
+    - Google account
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    After signing up, you'll land on your project dashboard.
+  </Step>
 
-## Next steps
+  <Step title="Import the Node.js Recipe Project">
+    On your dashboard, locate the **Projects** section and click on **Import a project**.
 
-Now that you have your docs running, explore these key features:
+    Copy and paste this YAML configuration:
+
+    ```yaml
+    project:
+      name: recipe-nodejs
+      tags:
+        - zerops-quickstart
+
+    services:
+      - hostname: api
+        type: nodejs@20
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-nodejs
+
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+        priority: 1
+    ```
+
+    Click **Import project** to start the deployment.
+
+    ### What This Configuration Does
+
+    Let's break down what's happening:
+
+    **Project Configuration:**
+    - Creates a new project named `recipe-nodejs`
+    - Tags it for easy identification
+
+    **API Service (Node.js):**
+    - Creates a Node.js 20 runtime service named `api`
+    - Enables public access via Zerops subdomain
+    - Automatically builds from the GitHub repository
+    - Configures load balancing, SSL, and autoscaling
+
+    **Database Service (PostgreSQL):**
+    - Creates a PostgreSQL 16 database named `db`
+    - Runs in NON_HA mode (single container for development)
+    - Priority 1 ensures the database starts before the API
+    - Automatically configures secure internal networking
+
+    <Note>
+      The `buildFromGit` parameter triggers a one-time build and deployment from the specified repository. The repository contains a `zerops.yaml` file that tells Zerops how to build and run the application.
+    </Note>
+  </Step>
+
+  <Step title="Watch the Deployment Process">
+    After clicking import, Zerops will:
+
+    1. **Create project infrastructure** (5-10 seconds)
+       - Deploy L3 balancer with firewall
+       - Set up L7 load balancer for HTTP traffic
+       - Configure logging and statistics containers
+       - Assign IPv6 and IPv4 addresses
+
+    2. **Create the PostgreSQL database** (10-15 seconds)
+       - Provision storage
+       - Initialize database cluster
+       - Set up automatic backups
+       - Generate connection credentials
+
+    3. **Build the Node.js application** (30-60 seconds)
+       - Clone the GitHub repository
+       - Create build container with Node.js 20
+       - Run `npm install`
+       - Execute build commands
+       - Create application artifact
+
+    4. **Deploy to runtime** (10-15 seconds)
+       - Create runtime container(s)
+       - Deploy built application
+       - Run database migrations
+       - Start the application
+       - Configure routing and SSL
+
+    You can watch the build progress in real-time by clicking on the running pipeline in your service detail.
+
+    <Tip>
+      The build log shows every command executed during the build process. This is incredibly useful for debugging if something goes wrong.
+    </Tip>
+  </Step>
+
+  <Step title="Access Your Deployed Application">
+    Once all pipelines complete (indicated by green checkmarks), your application is live!
+
+    ### Find Your Application URL
+
+    1. Navigate to your project dashboard
+    2. Click on the **api** service
+    3. Look for the **IP Addresses & Public Routing Overview** section
+    4. Find the subdomain URL (format: `https://api-<random-id>-8080.prg1.zerops.app`)
+
+    ### Test the Application
+
+    Click the subdomain URL to open your application in a browser. You should see:
+
+    ```
+    Hello, World!
+    ```
+
+    This simple response confirms your Node.js application is running and successfully connected to the PostgreSQL database.
+
+    ### What Just Happened?
+
+    Behind the scenes, your application:
+    - Connected to the PostgreSQL database using environment variables automatically provided by Zerops
+    - Ran database migrations during the initialization phase
+    - Started serving HTTP requests through the load balancer
+    - Got automatic SSL certificate for HTTPS access
+
+    <Check>
+      Your application is now running on production-ready infrastructure with automatic scaling, load balancing, and monitoring enabled!
+    </Check>
+  </Step>
+
+  <Step title="Explore the Zerops Dashboard">
+    Now that your application is running, explore the Zerops dashboard to see what's available:
+
+    ### Service Overview
+    - **Runtime Log**: Real-time logs from your application
+    - **Build Log**: History of all builds and deployments
+    - **Metrics**: CPU, RAM, and disk usage with automatic scaling visualization
+    - **Containers**: View and manage individual containers
+
+    ### Database Management
+    - **Connection Info**: Access credentials and connection strings
+    - **Backups**: Automatic backup configuration and manual backup triggers
+    - **Metrics**: Database performance monitoring
+    - **Logs**: PostgreSQL server logs
+
+    ### Project Settings
+    - **Environment Variables**: Manage secrets and configuration
+    - **Public Access**: Configure domains and routing
+    - **VPN**: Connect to your project's private network
+    - **Team**: Invite collaborators
+
+    <Info>
+      All of this infrastructure—load balancers, firewalls, SSL certificates, logging, monitoring—is fully managed by Zerops. You just focus on your code.
+    </Info>
+  </Step>
+</Steps>
+
+## Understanding zerops.yaml
+
+The magic behind the automated deployment is the `zerops.yaml` file in the recipe repository. Let's look at what it contains:
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm i
+        - npm run build
+      deployFiles: ./dist
+      cache: node_modules
+    run:
+      base: nodejs@20
+      start: npm start
+```
+
+### Configuration Breakdown
+
+**`setup: api`** - Links this configuration to the `api` service
+
+**Build Phase:**
+- `base: nodejs@20` - Uses Node.js 20 build environment
+- `buildCommands` - Commands to build your application
+- `deployFiles: ./dist` - Only deploys the `dist` folder to runtime (smaller, faster)
+- `cache: node_modules` - Caches dependencies for faster subsequent builds
+
+**Run Phase:**
+- `base: nodejs@20` - Uses Node.js 20 runtime environment
+- `start: npm start` - Command to start your application
+
+This simple configuration gives you:
+- Automatic dependency installation
+- Production builds
+- Optimized artifact deployment
+- Fast rebuilds with caching
+- Zero-downtime deployments
+
+<Card title="Full zerops.yaml Reference" icon="book" href="/zerops-yaml/specification">
+  Learn about all available configuration options
+</Card>
+
+## What's Next?
+
+### Deploy Your Own Application
+
+Now that you've deployed a recipe, try deploying your own application:
+
+<Steps>
+  <Step title="Add zerops.yaml to Your Repository">
+    Create a `zerops.yaml` file in the root of your repository based on the example above. Customize the build and start commands for your application.
+  </Step>
+
+  <Step title="Create Services in Zerops">
+    Use the import YAML configuration to create your project structure, or create services manually through the GUI.
+  </Step>
+
+  <Step title="Connect Your Repository">
+    In your service detail, go to **Pipelines & CI/CD settings** and connect your GitHub or GitLab repository for automatic deployments.
+  </Step>
+</Steps>
+
+### Explore More Recipes
+
+Browse our [GitHub organization](https://github.com/zeropsio) for ready-to-deploy recipes in various technologies:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Node.js Recipes" icon="node-js" href="https://github.com/zeropsio?q=nodejs">
+    Express, NestJS, Next.js examples
+  </Card>
+  <Card title="PHP Recipes" icon="php" href="https://github.com/zeropsio?q=php">
+    Laravel, Symfony applications
+  </Card>
+  <Card title="Python Recipes" icon="python" href="https://github.com/zeropsio?q=python">
+    Django, FastAPI projects
+  </Card>
+  <Card title="Go Recipes" icon="golang" href="https://github.com/zeropsio?q=go">
+    Go web applications and APIs
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+### Learn Core Concepts
+
+<CardGroup cols={2}>
+  <Card title="Project Infrastructure" icon="server" href="/features/infrastructure">
+    Understand how Zerops organizes projects and services
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line" href="/features/scaling">
+    Configure horizontal and vertical autoscaling
+  </Card>
+  <Card title="Build Pipeline" icon="code" href="/features/pipeline">
+    Master the build and deploy pipeline
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/features/env-variables">
+    Manage secrets and configuration
+  </Card>
+</CardGroup>
+
+### Use the CLI
+
+For advanced workflows, install the Zerops CLI:
+
+```bash
+# Install zCLI
+npm i -g @zerops/zcli
+
+# Login
+zcli login
+
+# Push code to trigger build
+zcli service push
+
+# Connect to VPN
+zcli vpn start
+```
+
+<Card title="CLI Documentation" icon="terminal" href="/references/cli">
+  Explore all CLI commands and capabilities
+</Card>
+
+## Get Help
+
+Running into issues or have questions?
+
+<CardGroup cols={2}>
+  <Card title="Discord Community" icon="discord" href="https://discord.com/invite/WDvCZ54">
+    Join our Discord server for real-time help from the Zerops team and community
+  </Card>
+  <Card title="Documentation" icon="book" href="/">
+    Browse the complete documentation for detailed guides and references
+  </Card>
+</CardGroup>
+
+## Congratulations!
+
+You've successfully deployed your first application on Zerops. You now have:
+
+<Check>Production-ready infrastructure with load balancing and SSL</Check>
+<Check>Automatic scaling configured and ready</Check>
+<Check>Zero-downtime deployment pipeline</Check>
+<Check>Comprehensive logging and monitoring</Check>
+<Check>A foundation to build your next great application</Check>
+
+Welcome to Zerops—now go build something amazing!

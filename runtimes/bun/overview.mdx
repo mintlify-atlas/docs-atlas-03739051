@@ -1,0 +1,151 @@
+---
+title: Bun Runtime on Zerops
+description: Deploy and scale Bun applications on Zerops with automatic scaling, build pipelines, and database integration.
+---
+
+Bun is a fast, all-in-one JavaScript runtime and toolkit. Zerops provides a powerful hosting environment for Bun applications with automatic scaling, built-in CI/CD, and seamless database connectivity.
+
+## Why Choose Bun on Zerops
+
+Zerops makes deploying Bun applications effortless:
+
+- **Blazing Fast** - 3x faster than Node.js for many operations
+- **All-in-One** - Runtime, package manager, bundler, and test runner
+- **Automatic Scaling** - Horizontal and vertical auto-scaling
+- **Built-in CI/CD** - Automatic builds from Git
+- **Database Integration** - Easy connections to PostgreSQL, MySQL, and more
+
+## Supported Bun Versions
+
+Zerops supports:
+- `bun@1.0`
+- `bun@1.1`
+- `bun@latest`
+
+## Quick Start
+
+Deploy a Bun application in minutes:
+
+<Steps>
+  <Step title="Create a project">
+    Log in to the [Zerops GUI](https://app.zerops.io) and create a new project.
+  </Step>
+  
+  <Step title="Import the recipe">
+    Use our ready-made recipe:
+    
+    ```yaml
+    project:
+      name: my-bun-app
+    
+    services:
+      - hostname: api
+        type: bun@1.1
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-bun
+    
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+        priority: 1
+    ```
+  </Step>
+  
+  <Step title="Access your app">
+    Once deployed, access via the generated subdomain.
+  </Step>
+</Steps>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Quick Setup" icon="bolt" href="/runtimes/bun/quickstart">
+    Get started in minutes with our quickstart guide.
+  </Card>
+  
+  <Card title="Build Pipeline" icon="code" href="/runtimes/bun/build-pipeline">
+    Configure your build process with zerops.yaml.
+  </Card>
+</CardGroup>
+
+## Example Bun Application
+
+Here's a simple Bun server with PostgreSQL:
+
+```typescript title="server.ts"
+import { serve } from "bun";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  host: "db",
+  port: 5432,
+  user: "db",
+  password: process.env.DB_PASSWORD,
+  database: "db",
+});
+
+const server = serve({
+  port: 3000,
+  async fetch(req) {
+    const result = await pool.query(
+      "SELECT COUNT(*) as count FROM requests"
+    );
+    
+    return new Response(
+      JSON.stringify({ 
+        message: "Hello from Bun on Zerops!",
+        count: result.rows[0].count 
+      })
+    );
+  },
+});
+
+console.log(`Listening on http://localhost:${server.port}`);
+```
+
+With `zerops.yaml`:
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: bun@1.1
+      buildCommands:
+        - bun install
+        - bun build ./server.ts --outdir ./dist
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      cache: node_modules
+    
+    run:
+      base: bun@1.1
+      ports:
+        - port: 3000
+      start: bun run dist/server.js
+```
+
+## Why Bun?
+
+<CardGroup cols={2}>
+  <Card title="Fast Package Manager" icon="box">
+    Install packages up to 25x faster than npm.
+  </Card>
+  
+  <Card title="Native TypeScript" icon="code">
+    Run .ts files directly without compilation.
+  </Card>
+  
+  <Card title="Built-in Bundler" icon="boxes-stacked">
+    Bundle your app with `bun build`.
+  </Card>
+  
+  <Card title="Node.js Compatible" icon="node-js">
+    Works with most npm packages.
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+Join our [Discord community](https://discord.com/invite/WDvCZ54) for support.

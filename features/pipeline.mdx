@@ -1,0 +1,297 @@
+---
+title: Build & Deploy Pipeline
+description: Learn how to configure and trigger Zerops build and deploy pipeline for your applications.
+---
+
+Zerops provides a customizable build and runtime environment for your application. This guide covers how to configure, trigger, and manage your build and deployment pipeline.
+
+## Configure the Pipeline
+
+Start by adding a `zerops.yaml` file to the **root of your repository** and modify it to fit your application.
+
+Here is a basic example for a Node.js application:
+
+```yaml
+zerops:
+  - setup: api
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm i
+        - npm run build
+      deployFiles: ./dist
+      cache: node_modules
+    run:
+      base: nodejs@20
+      start: npm start
+```
+
+The zerops.yaml in your repository tells Zerops how to build and deploy your application. When the build & deploy pipeline triggers for the Node.js service named `api`, Zerops will:
+
+1. Create a build environment with Node.js v.20 preinstalled
+2. Run build commands: `npm i`, `npm run build`
+3. Create a runtime environment with Node.js v.20 preinstalled
+4. Deploy the built artifact from the `./dist` folder to runtime containers
+5. Cache the `./node_modules` folder for faster subsequent builds
+6. Start your application using `npm start`
+
+Learn more about `zerops.yaml` parameters in the [zerops.yaml specification](/zerops-yaml/specification).
+
+## Trigger the Pipeline
+
+### Continuous Deployment
+
+Set up automatic builds triggered by Git events. You can establish continuous deployment in two ways:
+
+* **New Service:** Create a new runtime service and connect it to your GitHub or GitLab repository during the service creation process.
+* **Existing Services:** Go to the service detail and choose **Pipelines & CI/CD settings** from the left menu. Click **Connect with a GitHub repository** or **Connect with a GitLab repository** to link your repository.
+
+Once connected, Zerops will automatically build and deploy your application with each push to the selected branch or when you create a new tag.
+
+### On-Demand Deployment
+
+Trigger builds and deployments manually when needed using either the CLI or GUI.
+
+#### Using Zerops CLI
+
+- **Build and deploy:** `zcli service push` - Uploads code and triggers the full pipeline
+- **Deploy only:** `zcli service deploy` - Skips build, deploys pre-built artifacts
+
+See [CLI commands documentation](/references/zcli/commands#service-operations) for all parameters.
+
+#### Using Zerops GUI
+
+In **Pipelines & CI/CD settings** section of your service detail:
+
+- **Re-deploy last pipeline** - With optional secret env variable updates
+- **Trigger new pipeline** - From git repo or with custom configuration
+
+#### Using Import YAML
+
+Add `buildFromGit: <repo-url>` to your service configuration for one-time build during import. See [import documentation](/references/import#service-basic-configuration).
+
+## Build Phase
+
+Zerops starts a temporary build container and executes these steps:
+
+<Steps>
+  <Step title="Install build environment">
+    Sets up the runtime and tools based on your `build.base` configuration
+  </Step>
+  <Step title="Download source code">
+    From GitHub, GitLab, or via Zerops CLI
+  </Step>
+  <Step title="Customize environment">
+    Runs optional preparation commands (`build.prepareCommands`)
+  </Step>
+  <Step title="Execute build commands">
+    Compiles and packages your application
+  </Step>
+  <Step title="Upload artifacts">
+    Stores build output in internal Zerops storage
+  </Step>
+  <Step title="Cache files">
+    Optionally caches selected files for faster future builds
+  </Step>
+</Steps>
+
+Zerops automatically deletes the build container after the build finishes or fails.
+
+### Build Hardware Resources
+
+All runtime services use the same hardware resources for build containers:
+
+| HW Resource | Minimum | Maximum |
+|------------|---------|--------|
+| CPU cores | 1 | 5 |
+| RAM | 8 GB | 8 GB |
+| Disk | 1 GB | 100 GB |
+
+Build containers start with minimum resources and scale vertically up to maximum capacity as needed.
+
+<Info>
+Build container resources are not charged. Build costs are covered by the standard Zerops [project fee](https://zerops.io/#pricing).
+</Info>
+
+### Build Time Limit
+
+The entire build pipeline has a **1 hour** time limit. After 1 hour, Zerops terminates the build pipeline and deletes the build container.
+
+### Customize the Build Environment
+
+All runtime services start with a default build environment based on the `build.base` attribute in `zerops.yaml`. Install additional packages or tools by adding `build.prepareCommands` to your configuration.
+
+## Runtime Prepare Phase (Optional)
+
+When your application requires additional system packages, libraries, or tools in the runtime environment, Zerops allows you to build a custom runtime image. This optional phase occurs after the build phase and before deployment.
+
+### When to Use Custom Runtime Images
+
+Build custom runtime images when you need:
+- System packages or libraries for runtime operations (e.g., `sudo apk add imagemagick` for image processing)
+- Library dependencies for interpreted languages or dynamically linked binaries
+- System-level tools or utilities your application requires
+- Customized base operating system or additional software layers
+
+### Configuration
+
+Configure custom runtime images in your `zerops.yml` file using these fields:
+
+#### `run.os` + `run.base`
+
+Specify the operating system and base packages for your custom runtime image:
+
+```yaml
+run:
+  os: alpine # or ubuntu
+  base: nodejs@20 # specify your runtime and version
+```
+
+#### `run.prepareCommands`
+
+Define commands that customize your runtime image:
+
+```yaml
+run:
+  prepareCommands:
+    - sudo apk add --no-cache imagemagick
+    - sudo apt-get update && apt-get install -y some-package  # for Ubuntu
+```
+
+#### `build.addToRunPrepare`
+
+Copy specific files from the build phase to the runtime prepare phase:
+
+```yaml
+build:
+  addToRunPrepare:
+    - package.json
+    - requirements.txt
+    - config/runtime-setup.sh
+```
+
+### Custom Runtime Image Caching
+
+Zerops caches custom runtime images to optimize deployment times. The runtime prepare phase is skipped and cached images are reused when:
+
+- It is not the first deployment of your service
+- None of these `zerops.yaml` fields changed since the last deployment:
+  - `run.os` or `run.base`
+  - `run.prepareCommands`
+  - `build.addToRunPrepare`
+- File contents specified in `build.addToRunPrepare` remain unchanged
+- The custom runtime image cache hasn't been manually invalidated
+
+<Warning>
+Do not include your application code in the custom runtime image, as your built application code is deployed automatically into fresh containers.
+
+Shared storage mounts are also not available during the runtime prepare phase.
+</Warning>
+
+## Deploy Phase
+
+### Application Artifacts
+
+After the build phase completes, Zerops stores the application artifact in internal storage and deletes the build container.
+
+Zerops uses the stored artifact to deploy identical versions of your application whenever a new container starts:
+
+- During new application version deployments
+- When applications scale horizontally
+- When runtime containers fail and new containers start automatically
+
+### First Deploy
+
+For initial deployments, Zerops starts one or more runtime containers based on your service auto scaling settings.
+
+Zerops executes these steps for each new container:
+
+<Steps>
+  <Step title="Install runtime environment">
+    Sets up the runtime (or uses a custom runtime image if configured)
+  </Step>
+  <Step title="Download application artifact">
+    Retrieves build output from internal storage
+  </Step>
+  <Step title="Run initialization">
+    Executes optional init commands
+  </Step>
+  <Step title="Start application">
+    Launches your app using the start command
+  </Step>
+  <Step title="Check readiness">
+    Waits for readiness check to succeed (if configured)
+  </Step>
+  <Step title="Activate container">
+    Container becomes active and receives incoming requests
+  </Step>
+</Steps>
+
+Services with multiple containers deploy in parallel.
+
+### Subsequent Deploys
+
+For applications with existing running versions, Zerops starts new containers matching the count of existing containers.
+
+Zerops executes the same steps as the first deployment for each new container. Your service briefly contains both new and old versions during this process.
+
+Old containers are then removed from the project balancer to stop receiving new requests. The processes inside old containers terminate and Zerops gradually deletes all old containers.
+
+### Readiness Checks
+
+If your application is not ready to handle requests immediately after starting, configure a readiness check in your `zerops.yaml`.
+
+When readiness checks are defined, Zerops:
+
+1. **Starts your application**
+2. **Performs readiness check**
+3. **Waits and retries** - If check fails, waits 5 seconds and repeats step 2
+4. **Activates container** - If check succeeds, marks container as active
+
+Runtime containers with pending readiness checks do not receive incoming requests - only active containers handle traffic.
+
+**Readiness check types:**
+
+- `httpGet` - Succeeds when URL returns HTTP `2xx` status (5-second timeout, follows `3xx` redirects)
+- `exec.command` - Succeeds when command returns status code 0 (5-second timeout)
+
+## Manual Deploy Using Zerops CLI
+
+Start deploy-only pipelines using the Zerops CLI. The `zcli service deploy` command uploads and deploys your application in Zerops. Use this when you have your own build process.
+
+```sh
+Usage:
+  zcli service deploy pathToFileOrDir [flags]
+
+Flags:
+      --archive-file-path string   If set, zCLI creates a tar.gz archive
+      --deploy-git-folder          Sets a custom path to zerops.yaml
+  -h, --help                       Help for the service deploy command
+      --project-id string         Specify the project ID
+      --service-id string         Specify the service ID
+      --version-name string       Adds a custom version name
+      --working-dir string        Sets a custom working directory
+      --zerops-yaml-path string   Sets a custom path to zerops.yaml
+```
+
+## Manage Builds and Deployments
+
+### Cancel Running Build
+
+When you need to cancel an incorrect running build, use the Zerops GUI. Go to the service detail, open the running processes list, and click **Open pipeline detail**. Then click **Cancel build**.
+
+<Note>
+Build cancellation is only available before the build pipeline finishes. Once the build completes, deployment cannot be cancelled.
+</Note>
+
+### Application Versions
+
+Zerops keeps the 10 most recent versions of your application in internal storage.
+
+Access the application versions list in Zerops GUI by going to service detail and choosing the **Pipelines & CI/CD settings** section from the left menu. The active version is highlighted.
+
+### Restore an Archived Version
+
+Restore archived versions by choosing **Activate** from the additional menu. Zerops will deploy the selected version and archive the currently active version.
+
+Environment variables restore to their state from the last moment when the selected version was active.

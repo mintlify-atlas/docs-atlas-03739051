@@ -1,0 +1,175 @@
+---
+title: Ubuntu
+description: Flexible Ubuntu container environments for running custom applications and unsupported technologies in Zerops.
+---
+
+[Ubuntu](https://ubuntu.com/) is a popular Linux distribution based on Debian, widely used for servers, cloud computing, and containerized applications.
+
+Ubuntu services in Zerops provide a flexible base environment for running applications built with technologies that aren't officially supported by Zerops, or for custom setups requiring full control over the runtime environment.
+
+## Getting Started
+
+Ubuntu services give you a blank canvas to build upon. You can:
+
+- Install any software packages you need
+- Configure custom runtime environments
+- Run applications in languages not natively supported by Zerops
+- Create specialized development or testing environments
+
+### Creating an Ubuntu Service
+
+You can create an Ubuntu service using:
+
+1. **Zerops GUI** - Through the web interface when adding a new service
+2. **zCLI** - Using the command-line interface
+
+### Configuration Example
+
+```yaml
+services:
+  - hostname: app
+    type: ubuntu@24
+```
+
+## Build and Runtime Configuration
+
+### Customize Build Environment
+
+Use the build phase to install dependencies and prepare your application:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: ubuntu@24
+      buildCommands:
+        - apt-get update
+        - apt-get install -y python3 python3-pip
+        - pip3 install -r requirements.txt
+      deployFiles:
+        - app/
+        - requirements.txt
+```
+
+### Customize Runtime Environment
+
+Configure how your application runs:
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: ubuntu@24
+      prepareCommands:
+        - apt-get update
+        - apt-get install -y python3
+      start: python3 app/main.py
+      ports:
+        - port: 8080
+          httpSupport: true
+```
+
+## Scaling Configuration
+
+Ubuntu services support both horizontal and vertical scaling:
+
+```yaml
+zerops:
+  - setup: app
+    # ... other config
+    verticalAutoscaling:
+      minCpu: 1
+      maxCpu: 5
+      minRam: 0.5
+      maxRam: 4
+    horizontalAutoscaling:
+      minContainers: 1
+      maxContainers: 3
+```
+
+This ensures your service runs smoothly while using only necessary resources.
+
+## Use Cases
+
+Ubuntu services are ideal for:
+
+- **Custom Technology Stacks** - Languages or frameworks not officially supported by Zerops
+- **Legacy Applications** - Running older applications with specific dependency requirements
+- **Testing Environments** - Creating isolated environments for testing
+- **Specialized Tools** - Running domain-specific software or tools
+- **Research & Development** - Experimental projects requiring custom configurations
+
+## Common Patterns
+
+### Installing System Dependencies
+
+```yaml
+build:
+  buildCommands:
+    - apt-get update
+    - apt-get install -y build-essential curl git
+```
+
+### Managing Application Dependencies
+
+```yaml
+build:
+  buildCommands:
+    - pip3 install -r requirements.txt
+    # or
+    - bundle install
+    # or
+    - composer install
+```
+
+### Multi-Stage Builds
+
+```yaml
+build:
+  buildCommands:
+    # Install build dependencies
+    - apt-get update
+    - apt-get install -y build-essential
+    # Build application
+    - make build
+  deployFiles:
+    # Only deploy built artifacts
+    - dist/
+```
+
+## Best Practices
+
+### Performance
+
+- Install only necessary packages to reduce image size
+- Use package manager caching where possible
+- Optimize startup commands for faster container initialization
+
+### Security
+
+- Keep system packages updated
+- Remove unnecessary packages after build
+- Use environment variables for sensitive configuration
+- Follow principle of least privilege
+
+### Maintainability
+
+- Document custom installation steps
+- Use version pinning for dependencies
+- Keep build and runtime configurations separate
+- Test configuration changes in development first
+
+## Popular Guides
+
+- [zCLI](/references/cli) - Command-line tool for managing Zerops services
+- [Zerops VPN](/references/networking/vpn) - Securely connect to your services
+- [Environment Variables](/features/env-variables) - Configure your application
+- [Scaling](/features/scaling-ha) - Optimize resource usage
+
+## Support
+
+Need help getting started with Ubuntu services?
+
+- Join our [Discord community](https://discord.com/invite/WDvCZ54) - Get help from our team and other members
+- Check the documentation for specific how-to guides
+- Share your knowledge and help others in the community

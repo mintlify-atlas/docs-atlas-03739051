@@ -1,0 +1,230 @@
+---
+title: NATS
+description: Production-ready NATS messaging system with automated scaling and enterprise reliability. Deploy and manage with zero infrastructure hassle.
+---
+
+Zerops provides a fully managed [NATS](https://nats.io/) messaging system with automated scaling and zero infrastructure overhead, letting developers focus entirely on development.
+
+## Supported Versions
+
+Zerops currently supports NATS version **2.10**.
+
+When importing a service, use version format:
+- `nats@2.10`
+
+## Service Configuration
+
+Our NATS implementation features optimized default settings designed for common use cases.
+
+**Key configuration aspects** include:
+
+- Standard protocol port `4222` for client connections
+- HTTP monitoring interface `8222` for management
+- Secure authentication with automatically generated credentials
+- Optimized settings for performance and reliability
+
+### Available Configuration Options
+
+You can fine-tune your NATS service by adjusting environment variables:
+
+<Note>
+If certain variables are not visible in your configuration, they may have been introduced after your service was created. Simply add them as [secret variables](/features/env-variables#2-secret-variables) to access the functionality.
+</Note>
+
+| Variable | Description |
+|----------|-------------|
+| `MAX_PAYLOAD` | Defines the maximum allowed message size for all NATS traffic. Default: `8MB`, Maximum: `64MB`. See [NATS limits documentation](https://docs.nats.io/running-a-nats-service/configuration#limits) for details. |
+| `JET_STREAM_ENABLED` | Controls whether JetStream functionality is enabled. Default: `1` (enabled), Set to `0` to disable. |
+
+<Warning>
+Configuration changes require a service **restart** to take effect. While NATS itself supports configuration hot-reload, this feature will be implemented in a future Zerops update.
+</Warning>
+
+After restarting, check your service logs to confirm the changes were applied successfully.
+
+### JetStream Configuration
+
+The service includes [JetStream](https://docs.nats.io/nats-concepts/jetstream) functionality **enabled by default**, providing persistent storage capabilities for your messaging workloads:
+
+- **Memory store**: Up to 40GB for high-performance message caching
+- **File store**: Up to 250GB for persistent storage
+- **Regular sync intervals**: Ensures data durability and consistency
+
+<Note>
+In HA deployments, data persistence is further enhanced with 1-minute sync intervals across all nodes, ensuring robust data durability and high availability.
+</Note>
+
+<Tip>
+Disabling JetStream can reduce resource utilization for applications that don't require message persistence.
+</Tip>
+
+## Deployment Modes
+
+<Warning>
+Deployment mode is selected during service creation and cannot be changed later.
+</Warning>
+
+### Non-HA Mode
+
+- Suitable for development and testing
+- Data persistence not guaranteed during node failures
+- Lower resource requirements
+
+### HA Mode
+
+- Creates a multi-node NATS cluster
+- Configures routes between cluster nodes automatically
+- Implements [NATS clustering](https://docs.nats.io/running-a-nats-service/configuration/clustering) for high availability
+- Provides improved reliability compared to non-HA deployments
+
+## Authentication Management
+
+Authentication credentials are automatically generated and managed by the platform. The system creates a default user (`zerops`) with a secure 16-character password. You can access these credentials through:
+
+- The service access details in the Zerops GUI
+- Environment variables in your service configuration:
+  - `user` - Username for authentication (default: "zerops")
+  - `password` - Generated secure password
+  - `connectionString` - Complete connection string in the format `nats://${dbUser}:${dbPassword}@${hostname}:${port}`
+
+## Connection Examples
+
+### Node.js
+
+```javascript
+import { connect } from 'nats';
+
+const nc = await connect({
+  servers: process.env.connectionString
+});
+
+// Publish a message
+nc.publish('subject', 'Hello NATS!');
+
+// Subscribe to a subject
+const sub = nc.subscribe('subject');
+for await (const msg of sub) {
+  console.log(`Received: ${msg.data}`);
+}
+```
+
+### Python
+
+```python
+import asyncio
+from nats.aio.client import Client as NATS
+import os
+
+async def main():
+    nc = NATS()
+    await nc.connect(os.environ['connectionString'])
+    
+    # Publish a message
+    await nc.publish('subject', b'Hello NATS!')
+    
+    # Subscribe to a subject
+    async def message_handler(msg):
+        print(f"Received: {msg.data.decode()}")
+    
+    await nc.subscribe('subject', cb=message_handler)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+### Go
+
+```go
+import (
+    "github.com/nats-io/nats.go"
+    "os"
+)
+
+func main() {
+    nc, _ := nats.Connect(os.Getenv("connectionString"))
+    defer nc.Close()
+    
+    // Publish a message
+    nc.Publish("subject", []byte("Hello NATS!"))
+    
+    // Subscribe to a subject
+    nc.Subscribe("subject", func(msg *nats.Msg) {
+        fmt.Printf("Received: %s\n", string(msg.Data))
+    })
+}
+```
+
+## Health Monitoring
+
+Zerops continuously monitors your NATS service health using built-in health checks:
+
+- **HTTP Health Check**: The system checks the `/healthz` endpoint at port 8222
+- **Self-Healing**: The platform automatically recovers unhealthy nodes when issues are detected
+
+### Health Status
+
+You can check the health status of your NATS service:
+
+1. Through the Zerops GUI dashboard
+2. By accessing the management interface at port `8222`
+
+## Backup and Recovery
+
+NATS backups are created using filesystem archival:
+
+- **Format**: `.tar.gz` (archive of queue state)
+- **Tooling**: Filesystem archival
+- **Content**: Captures persistent message state
+
+For backup configuration, scheduling, retention policies, and management options, see the [Zerops Backups](/features/backup) documentation.
+
+### Restoring Backups
+
+To restore a NATS backup:
+
+1. **Download** the backup file (`.tar.gz`) from the Zerops UI
+2. **Extract** the archive to access the queue state data
+3. **Prepare** your target environment (clear existing data if needed)
+4. **Restore** using NATS CLI commands via Zerops VPN or during deployment. Follow the [official NATS documentation](https://docs.nats.io/running-a-nats-service/nats_admin/jetstream_admin/disaster_recovery) for detailed restore procedures.
+
+For assistance with the restoration process, contact Zerops support.
+
+## Use Cases
+
+NATS excels in:
+
+- **Microservices Communication** - Lightweight, fast inter-service messaging
+- **Event-Driven Architecture** - Publish-subscribe patterns for event distribution
+- **Request-Reply Patterns** - Synchronous communication with built-in timeout
+- **Stream Processing** - Real-time data processing with JetStream
+- **IoT & Edge Computing** - Efficient messaging for resource-constrained environments
+- **Multi-tenant Applications** - Subject-based isolation and routing
+
+## Best Practices
+
+### Performance
+
+- Use subject hierarchies for efficient routing
+- Implement proper message batching where applicable
+- Monitor JetStream storage usage
+- Configure appropriate message limits for your workload
+
+### Reliability
+
+- Use JetStream for critical messages requiring persistence
+- Implement proper error handling and reconnection logic
+- Monitor consumer lag in stream processing
+- Use HA mode for production workloads
+
+### Security
+
+- Store credentials in environment variables
+- Use subject-based authorization where needed
+- Implement TLS for sensitive data (contact support)
+- Rotate credentials periodically
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)

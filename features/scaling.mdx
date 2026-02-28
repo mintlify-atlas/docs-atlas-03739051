@@ -1,0 +1,326 @@
+---
+title: Automatic Scaling and High Availability
+description: Learn how Zerops provides automatic scaling and high availability to optimize performance and costs.
+---
+
+Zerops delivers enterprise-grade infrastructure with built-in automatic scaling and high availability. Applications and databases dynamically adjust to traffic demands—scaling up during peak loads to maintain performance and scaling down during quiet periods to reduce costs.
+
+Unlike traditional hosting where resources must be predicted and pre-provisioned, Zerops continuously monitors workloads and automatically allocates exactly what is needed, when it is needed.
+
+## Key Benefits
+
+- **Cost Optimization**: Only pay for resources actually used
+- **Performance Reliability**: Maintain responsiveness during traffic spikes
+- **Automatic Management**: Built-in best practices with customizable settings
+- **High Availability**: Redundancy options for production environments
+
+## Understanding Zerops Scaling Architecture
+
+Zerops uses two fundamentally different approaches for optimizing infrastructure:
+
+#### Resource Management (Vertical Scaling)
+- **Applies to:** Runtime services, databases, shared storage, and Linux containers (Alpine and Ubuntu)
+- **What it does:** Adjusts CPU, RAM, and disk resources within individual containers
+- **Management:** Automated by Zerops, but customizable by users
+
+<Note>
+Docker services do not support automatic vertical scaling. Resource values can be manually changed, but this triggers a VM restart.
+</Note>
+
+#### Container Architecture
+- **For Runtime Services, Linux Containers, and Docker:** Horizontal Scaling (dynamic container count)
+  - Adds or removes containers/VMs based on load
+  - Requires applications to be designed for HA operation
+  - Container/VM creation limits can be controlled
+  - Docker containers run in VMs rather than native containers
+
+- **For Databases & Shared Storage:** High Availability Mode (fixed container count)
+  - Single Container OR Multi-Container HA configuration
+  - Must be chosen at service creation (cannot be changed later)
+  - Managed by Zerops (no application changes needed)
+
+### At-a-Glance Comparison
+
+| Feature | Runtime Services & Linux Containers | Databases | Shared Storage | Docker |
+|---------|-------------------------------------|-----------|----------------|--------|
+| Automatic Resource Scaling | ✓ | ✓ | ✓ | Manual (triggers VM restart) |
+| Automatic Horizontal Scaling | ✓ | Fixed # of containers | Fixed # of containers | ✓ |
+| High Availability | User-implemented | Zerops-managed HA mode | Zerops-managed HA mode | User-implemented |
+
+## When to Configure Scaling
+
+You can configure scaling settings at three different stages:
+
+- **During service creation** - Configure initial scaling parameters when creating services in the Zerops GUI
+- **During import** - Use YAML configuration files to define comprehensive scaling settings
+- **After service creation** - Modify most scaling settings anytime through your service's **Automatic scaling configuration** page
+
+This flexibility lets you plan scaling strategies upfront or adapt them as requirements evolve.
+
+## Part 1: Resource Management
+
+Resource management in Zerops focuses on efficiently allocating and adjusting CPU, RAM, and disk resources within individual containers based on actual usage patterns.
+
+These resource management capabilities apply to **runtime** services, **databases**, **shared storage**, and **Linux containers** (Alpine and Ubuntu).
+
+<Tip>
+To prevent automatic scaling of specific resources, simply set identical minimum and maximum values for CPU, RAM, or Disk.
+</Tip>
+
+### CPU Settings
+
+#### CPU Mode
+
+Two CPU allocation modes are available for any service:
+
+**Shared CPU**
+
+Shared CPU provides a physical CPU core shared with up to 10 other applications. Performance varies depending on neighbors, ranging from 1/10 to 10/10 power. This option is cost-effective for non-critical workloads, development, and testing environments.
+
+**Dedicated CPU**
+
+Dedicated CPU gives exclusive access to a full physical CPU core(s), ensuring consistent and predictable performance. This option is ideal for production environments and CPU-intensive applications.
+
+<Tip>
+CPU mode can be changed (once per hour) as needed.
+</Tip>
+
+#### Minimum and Maximum CPU Cores
+
+Set boundaries for CPU core allocation. Zerops will scale CPU resources within these limits based on actual usage.
+
+#### Start CPU Core Count
+
+Determines how many CPU cores are allocated when containers start:
+- Default: 2 cores
+- Applies to both dedicated and shared CPU modes
+- Higher values provide more processing power during application initialization
+- After startup, resources are automatically adjusted based on actual usage and limits
+
+#### CPU Scaling Thresholds
+
+For services using dedicated CPU only, CPU scaling is controlled by:
+
+**Min. Free CPU Cores (%)**
+- Scale-up is triggered when free capacity drops below a fixed fraction of a single CPU core
+- Default: 10%
+- Set as a percentage of a single core's capacity
+
+**Dynamic Min. Free Total Core Percent**
+- Scale-up is triggered when total free capacity across all cores falls below a percentage of total capacity
+- Default: 0% (disabled)
+- Dynamically adjusts as the number of cores changes
+- Ideal for accommodating varying load distributions
+
+### RAM Settings
+
+#### Minimum and Maximum RAM
+
+Set boundaries for RAM allocation. Zerops will scale RAM within these limits based on actual usage.
+
+#### RAM Scaling Thresholds
+
+RAM usage is monitored every 10 seconds to ensure optimal performance. The minimum free RAM settings serve multiple important purposes: they prevent Out of Memory (OOM) errors, provide space for kernel disk caching (which improves application performance), and maintain a buffer for sudden memory demands.
+
+Two threshold types determine RAM scaling:
+
+**Minimum Free RAM (absolute value in GB)**
+- Specifies an absolute threshold for free RAM
+- Additional memory is triggered when available RAM falls below this fixed amount
+- Default: 0.0625 GB (64 MB) for most services
+- Ideal for maintaining system stability and responsiveness
+
+**Minimum Free RAM (% of Granted)**
+- Establishes a dynamic threshold based on a percentage of total granted memory
+- Default: 0% (disabled)
+- The buffer scales proportionally as total memory increases
+- Particularly useful for handling varying loads
+
+<Note>
+Whichever setting provides more free memory is used.
+</Note>
+
+### Disk Settings
+
+#### Minimum and Maximum Disk
+
+Set boundaries for disk space allocation. Zerops will scale disk space within these limits based on actual usage.
+
+### Resource Scaling Behavior
+
+Zerops implements an exponential growth pattern ensuring that **resources grow gradually** for minor load increases but can scale rapidly when significant additional capacity is needed.
+
+Below are the parameters that control this behavior:
+
+- **Data Collection Interval:** How frequently resource usage metrics are collected
+- **Scale-Up Window Interval:** The timeframe in which high usage must persist before adding resources
+- **Scale-Down Window Interval:** The timeframe in which low usage must persist before reducing resources
+- **Scale-Up Threshold Percentile:** The usage percentile that triggers resource scaling up
+- **Scale-Down Threshold Percentile:** The usage percentile that triggers resource scaling down
+- **Minimum Step:** The smallest increment by which resources can increase during scaling
+- **Maximum Step:** The largest possible increment for resources when scaling rapidly
+
+| Parameter | CPU | RAM | Disk |
+|-----------|-----|-----|------|
+| Data Collection Interval | 10 seconds | 10 seconds | 10 seconds |
+| Scale-Up Window Interval | 20 seconds | 10 seconds | 10 seconds |
+| Scale-Down Window Interval | 60 seconds | 120 seconds | 300 seconds |
+| Scale-Up Threshold Percentile | 60 | 50 | 50 |
+| Scale-Down Threshold Percentile | 40 | 50 | 50 |
+| Minimum Step | 1 (0.1 cores) | 0.125 GB | 0.5 GB |
+| Maximum Step | 40 | 32 GB | 128 GB |
+
+## Part 2: Container Architecture
+
+Container architecture in Zerops defines how services are distributed across containers. Different service types use fundamentally different approaches:
+
+1. **Horizontal Scaling** (Runtime Services, Linux Containers, and Docker)
+2. **Deployment Modes** (Databases and Shared Storage)
+
+### Horizontal Scaling (Runtime Services, Linux Containers, and Docker)
+
+Horizontal scaling adds or removes entire containers (or VMs for Docker) as demand fluctuates.
+
+* When vertical scaling reaches its defined maximum, new containers/VMs are automatically added to handle additional load.
+* As demand decreases, containers/VMs are gradually removed to optimize resource usage.
+
+<Note>
+For applications to work properly across multiple containers, they must be designed to be HA-ready.
+</Note>
+
+#### Setting Horizontal Scaling Parameters
+
+To configure horizontal scaling, users need to set the minimum and maximum number of containers:
+
+- **Minimum Containers**: The baseline number of containers that should always be running (system limit: 1)
+- **Maximum Containers**: The upper limit of containers that can be created during high demand (system limit: 10)
+
+<Tip>
+Setting identical minimum and maximum values creates a fixed number of containers (disables automatic horizontal scaling).
+</Tip>
+
+### Deployment Modes (Databases and Shared Storage)
+
+For databases and shared storage services, Zerops offers two deployment modes focused on reliability and data integrity.
+
+<Warning>
+Deployment mode cannot be changed after creation.
+</Warning>
+
+#### Single Container Mode
+
+Single Container Mode provides one container with vertical scaling only. This is suitable for development environments or non-critical data storage.
+
+**Characteristics:**
+- Limited redundancy
+- No automatic recovery if the container fails
+- Data since last backup (if available) may be lost if failure occurs
+- Cost-effective for non-production environments
+
+#### Highly Available (HA) Mode
+
+Highly Available (HA) Mode creates multiple containers with built-in redundancy. This mode is strongly recommended for production environments and mission-critical data.
+
+**Characteristics:**
+- Multiple containers distributed across different physical machines
+- Automatic failover and recovery mechanisms
+- Data redundancy and integrity protection
+- Higher reliability and availability
+- Recommended for production use
+
+<Note>
+Database and shared storage services in HA mode have a **fixed number of containers** that cannot be increased or decreased.
+</Note>
+
+**Recovery process:**
+
+In HA mode, when a container or physical machine fails, recovery is handled automatically:
+
+<Steps>
+  <Step title="Disconnect failed container">
+    The failed container is disconnected from the cluster
+  </Step>
+  <Step title="Create new container">
+    A new container is created on a different physical machine
+  </Step>
+  <Step title="Synchronize data">
+    Data is synchronized from remaining healthy copies
+  </Step>
+  <Step title="Remove failed container">
+    The failed container is removed
+  </Step>
+  <Step title="Service continues">
+    Service continues with minimal disruption
+  </Step>
+</Steps>
+
+### Fixed Resource Allocation (Docker Services)
+
+Docker services in Zerops operate differently from other service types:
+
+#### Docker Service Characteristics
+
+- **VM-Based Deployment**: Docker services run in virtual machines rather than containers
+- **Fixed Resources**: Unlike other services, Docker services do not support automatic vertical scaling
+- **User-Defined Resources**: Resources are set at creation and remain fixed until manually changed
+- **VM Count Changes**: The number of VMs can be changed, but this requires a VM restart
+- **No Automatic Scaling**: Resource levels do not automatically adjust based on usage
+
+<Warning>
+Docker services use fixed resources that do not automatically scale. Sufficient resources should be allocated at creation to handle expected workload. Additionally, disk space for Docker services can only be increased, not decreased without recreation of the service.
+</Warning>
+
+## Monitoring Your Infrastructure
+
+Zerops provides comprehensive monitoring tools in the user interface to track both resource usage and container scaling activities:
+
+### Resource History Graphs
+
+Resource and container scaling can be visualized over time:
+- CPU utilization per container
+- RAM usage patterns
+- Disk space consumption
+- Container count changes
+
+These graphs help understand application resource needs, identify usage patterns, and fine-tune scaling settings for optimal performance and cost efficiency.
+
+## Troubleshooting
+
+#### Resource-Related Issues (All Service Types Except Docker)
+
+**Out of Memory Errors**
+* **Issue:** Application crashes with OOM errors despite resource scaling.
+* **Possible Cause:** Insufficient minimum free RAM setting.
+* **Solution:**
+    - Increase the "Minimum free RAM" setting
+    - Check for memory leaks in the application
+    - Consider setting a higher minimum RAM value
+
+**Excessive Resource Costs**
+* **Issue:** Resources scaling up but not scaling down efficiently.
+* **Possible Cause:** Scale-down thresholds not optimized.
+* **Solution:**
+    - Review usage patterns in monitoring graphs
+    - Adjust scale-down thresholds to be more aggressive
+    - Set appropriate resource minimums based on base requirements
+
+#### Runtime Service and Linux Container Issues (Horizontal Scaling)
+
+**Application Not Working Properly Across Multiple Containers**
+* **Issue:** Application errors or inconsistent behavior when horizontally scaled.
+* **Possible Cause:** Application not designed for distributed operation.
+* **Solution:**
+    - Ensure the application properly handles stateless operation
+    - Implement proper session management across containers
+    - Review and modify application code to support multiple instances
+
+#### Docker Service Issues
+
+**Insufficient Resources for Workload**
+* **Issue:** Docker service experiencing performance issues or crashes.
+* **Possible Cause:** Fixed resources inadequate for actual workload.
+* **Solution:**
+    - Since Docker services don't support automatic vertical scaling, a new service with higher resource allocations may be needed
+    - Consider migrating to a runtime service or Linux container if dynamic resource scaling is needed
+
+*Need help implementing scaling in your project? Join our [Discord community](https://discord.gg/zerops) where our team and other Zerops users can assist you!*

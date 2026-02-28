@@ -1,0 +1,464 @@
+---
+title: Node.js Scaling
+description: Configure automatic horizontal and vertical scaling for Node.js applications on Zerops.
+---
+
+Zerops automatically scales your Node.js applications based on real-time resource usage, ensuring optimal performance and cost efficiency.
+
+## How Auto-Scaling Works
+
+Zerops continuously monitors your application and adjusts resources automatically:
+
+- **Vertical Scaling** - Adjusts CPU, RAM, and disk for each container
+- **Horizontal Scaling** - Adds or removes containers based on load
+- **Real-time Monitoring** - Checks resources every few seconds
+- **Automatic Optimization** - No manual intervention needed
+
+## Vertical Auto-Scaling
+
+Vertical scaling adjusts resources for individual containers.
+
+### CPU Modes
+
+<Tabs>
+  <Tab title="Shared CPU (Default)">
+    Containers share CPU with other services. Cost-effective for most applications.
+    
+    ```yaml
+    services:
+      - hostname: app
+        type: nodejs@20
+        verticalAutoscaling:
+          cpuMode: SHARED
+          minCpu: 1
+          maxCpu: 5
+    ```
+  </Tab>
+  
+  <Tab title="Dedicated CPU">
+    Containers get dedicated CPU cores. Best for CPU-intensive workloads.
+    
+    ```yaml
+    services:
+      - hostname: app
+        type: nodejs@20
+        verticalAutoscaling:
+          cpuMode: DEDICATED
+          minCpu: 2
+          maxCpu: 10
+    ```
+  </Tab>
+</Tabs>
+
+### Resource Limits
+
+Configure min/max resources:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    verticalAutoscaling:
+      cpuMode: SHARED
+      minCpu: 1        # Minimum CPU cores
+      maxCpu: 5        # Maximum CPU cores
+      minRam: 0.5      # Minimum RAM (GB)
+      maxRam: 8        # Maximum RAM (GB)
+      minDisk: 1       # Minimum disk (GB)
+      maxDisk: 10      # Maximum disk (GB)
+```
+
+<Info>
+  Start with conservative limits and adjust based on monitoring data.
+</Info>
+
+### Advanced Vertical Scaling
+
+Fine-tune scaling behavior:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    verticalAutoscaling:
+      cpuMode: DEDICATED
+      minCpu: 2
+      maxCpu: 8
+      minRam: 2
+      maxRam: 16
+      minDisk: 5
+      maxDisk: 50
+      startCpuCoreCount: 4        # Initial CPU cores
+      minFreeRamGB: 0.5           # Keep 0.5 GB free
+      minFreeRamPercent: 20       # Keep 20% RAM free
+```
+
+## Horizontal Auto-Scaling
+
+Horizontal scaling adds or removes containers based on load.
+
+### Basic Configuration
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 2     # Minimum containers (always running)
+    maxContainers: 10    # Maximum containers (scale up to 10)
+```
+
+### Scaling Triggers
+
+Zerops scales horizontally when:
+
+- **CPU usage** exceeds threshold for 60 seconds
+- **RAM usage** is consistently high
+- **Traffic** increases significantly
+- Containers reach resource limits
+
+### Scaling Example
+
+<Steps>
+  <Step title="Normal Load">
+    Your app runs with 2 containers at 40% CPU.
+  </Step>
+  
+  <Step title="Traffic Spike">
+    Traffic increases, CPU reaches 80% on all containers.
+  </Step>
+  
+  <Step title="Scale Up">
+    Zerops adds 2 more containers (total: 4).
+  </Step>
+  
+  <Step title="Load Balanced">
+    Traffic distributes across 4 containers, CPU drops to 50%.
+  </Step>
+  
+  <Step title="Traffic Decreases">
+    After 5 minutes of low usage, Zerops removes extra containers.
+  </Step>
+</Steps>
+
+## Scaling Configurations by Use Case
+
+### Development/Staging
+
+Minimal resources for testing:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 1
+    maxContainers: 2
+    verticalAutoscaling:
+      cpuMode: SHARED
+      minCpu: 1
+      maxCpu: 2
+      minRam: 0.5
+      maxRam: 2
+```
+
+### Production (Small)
+
+Small production app with light traffic:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 2
+    maxContainers: 4
+    verticalAutoscaling:
+      cpuMode: SHARED
+      minCpu: 1
+      maxCpu: 4
+      minRam: 1
+      maxRam: 4
+      minDisk: 2
+      maxDisk: 10
+```
+
+### Production (Medium)
+
+Medium traffic with burst capacity:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 3
+    maxContainers: 8
+    verticalAutoscaling:
+      cpuMode: DEDICATED
+      minCpu: 2
+      maxCpu: 6
+      minRam: 2
+      maxRam: 8
+      minDisk: 5
+      maxDisk: 20
+```
+
+### Production (High Traffic)
+
+High-traffic production app:
+
+```yaml
+services:
+  - hostname: app
+    type: nodejs@20
+    minContainers: 5
+    maxContainers: 10
+    verticalAutoscaling:
+      cpuMode: DEDICATED
+      minCpu: 4
+      maxCpu: 10
+      minRam: 4
+      maxRam: 16
+      minDisk: 10
+      maxDisk: 50
+      startCpuCoreCount: 6
+```
+
+## Monitoring Scaling
+
+### View Metrics in GUI
+
+<Steps>
+  <Step title="Access service metrics">
+    1. Go to your service in Zerops GUI
+    2. Click **Metrics** or **Dashboard**
+  </Step>
+  
+  <Step title="View resource usage">
+    Monitor:
+    - CPU usage per container
+    - RAM consumption
+    - Disk usage
+    - Network traffic
+    - Container count over time
+  </Step>
+  
+  <Step title="Adjust scaling">
+    Based on metrics, adjust your scaling configuration.
+  </Step>
+</Steps>
+
+### Key Metrics to Monitor
+
+<CardGroup cols={2}>
+  <Card title="CPU Usage" icon="microchip">
+    Should stay between 40-70% under normal load.
+  </Card>
+  
+  <Card title="RAM Usage" icon="memory">
+    Keep 20-30% free for traffic spikes.
+  </Card>
+  
+  <Card title="Container Count" icon="server">
+    Track how often scaling occurs.
+  </Card>
+  
+  <Card title="Response Time" icon="gauge">
+    Monitor application performance.
+  </Card>
+</CardGroup>
+
+## Optimizing Your Node.js App for Scaling
+
+### Use Clustering
+
+Leverage multiple CPU cores:
+
+```javascript title="server.js"
+const cluster = require('cluster');
+const os = require('os');
+const express = require('express');
+
+if (cluster.isMaster) {
+  const numWorkers = os.cpus().length;
+  
+  for (let i = 0; i < numWorkers; i++) {
+    cluster.fork();
+  }
+  
+  cluster.on('exit', (worker) => {
+    console.log(`Worker ${worker.id} died, starting new worker`);
+    cluster.fork();
+  });
+} else {
+  const app = express();
+  
+  // Your app code here
+  
+  app.listen(3000, '0.0.0.0');
+}
+```
+
+### Stateless Applications
+
+Design apps without local state:
+
+<Tabs>
+  <Tab title="Bad - Local State">
+    ```javascript
+    // Don't store state in memory
+    let userSessions = {};
+    
+    app.post('/login', (req, res) => {
+      userSessions[req.body.userId] = {
+        loginTime: Date.now()
+      };
+    });
+    ```
+  </Tab>
+  
+  <Tab title="Good - External State">
+    ```javascript
+    // Use Redis for shared state
+    const redis = require('redis');
+    const client = redis.createClient({
+      host: 'redis'
+    });
+    
+    app.post('/login', async (req, res) => {
+      await client.set(
+        `session:${req.body.userId}`,
+        JSON.stringify({ loginTime: Date.now() })
+      );
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Optimize Memory Usage
+
+Prevent memory leaks:
+
+```javascript
+// Use connection pooling
+const { Pool } = require('pg');
+const pool = new Pool({
+  host: 'db',
+  max: 20,  // Maximum connections
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000
+});
+
+// Clean up resources
+process.on('SIGTERM', async () => {
+  await pool.end();
+  process.exit(0);
+});
+```
+
+### Handle Graceful Shutdown
+
+Ensure clean shutdowns during scaling:
+
+```javascript
+const server = app.listen(3000);
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server...');
+  
+  server.close(() => {
+    console.log('Server closed');
+    
+    // Close database connections
+    pool.end();
+    
+    process.exit(0);
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Forcing shutdown');
+    process.exit(1);
+  }, 10000);
+});
+```
+
+## Cost Optimization
+
+### Right-Size Resources
+
+<AccordionGroup>
+  <Accordion title="Start conservative">
+    Begin with minimal resources:
+    
+    ```yaml
+    minContainers: 1
+    maxContainers: 4
+    minCpu: 1
+    maxCpu: 3
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor and adjust">
+    After 1-2 weeks, review metrics and adjust based on actual usage.
+  </Accordion>
+  
+  <Accordion title="Use shared CPU when possible">
+    Shared CPU is more cost-effective for most applications.
+  </Accordion>
+</AccordionGroup>
+
+### Scale Down Idle Services
+
+For non-production environments:
+
+```yaml
+services:
+  - hostname: staging
+    type: nodejs@20
+    minContainers: 0     # Scale to zero when idle
+    maxContainers: 2
+```
+
+<Warning>
+  `minContainers: 0` may cause cold starts. Not recommended for production.
+</Warning>
+
+## Troubleshooting Scaling
+
+<AccordionGroup>
+  <Accordion title="App keeps hitting CPU limits">
+    **Solutions:**
+    - Increase `maxCpu`
+    - Optimize code (use profiling tools)
+    - Increase `maxContainers` for horizontal scaling
+    - Consider dedicated CPU
+  </Accordion>
+  
+  <Accordion title="Memory usage growing constantly">
+    **Possible causes:**
+    - Memory leak in application
+    - Insufficient garbage collection
+    
+    **Solutions:**
+    - Profile with `node --inspect`
+    - Review event listeners and timers
+    - Increase `maxRam` temporarily
+  </Accordion>
+  
+  <Accordion title="Too many containers">
+    **Solutions:**
+    - Reduce `maxContainers`
+    - Increase resources per container
+    - Optimize application performance
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deployment Process" icon="rocket" href="/runtimes/nodejs/deployment">
+    Learn about zero-downtime deployments.
+  </Card>
+  
+  <Card title="Build Pipeline" icon="code" href="/runtimes/nodejs/build-pipeline">
+    Configure your build process.
+  </Card>
+</CardGroup>

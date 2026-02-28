@@ -1,0 +1,811 @@
+---
+title: Zerops.yaml Specification
+description: Complete reference for all zerops.yaml configuration parameters
+---
+
+This page provides a comprehensive reference for all available parameters in the `zerops.yaml` configuration file.
+
+<Note>
+Not all parameters are available for every service type. Most parameters work across different runtime services, but some are specific to certain service types (e.g., documentRoot for webserver services, routing for Static services).
+</Note>
+
+## File Structure
+
+```yaml
+zerops:
+  - setup: service-name
+    extends: base-service  # optional
+    build:                 # optional
+      ...
+    deploy:                # optional
+      ...
+    run:                   # required
+      ...
+```
+
+## Top-Level Configuration
+
+### setup
+
+<ParamField path="setup" type="string" required>
+  The hostname of your service. Must match an existing service in your Zerops project.
+  
+  ```yaml
+  setup: app
+  ```
+</ParamField>
+
+### extends
+
+<ParamField path="extends" type="string">
+  Inherit configuration from another service defined in the same `zerops.yaml` file. Useful for environment-specific configurations.
+  
+  ```yaml
+  zerops:
+    - setup: base
+      build:
+        buildCommands:
+          - npm run build
+      run:
+        start: npm start
+  
+    - setup: prod
+      extends: base
+      run:
+        envVariables:
+          NODE_ENV: production
+  ```
+  
+  **How it works:**
+  - The `extends` value must refer to another service's `setup` value
+  - Child service inherits all configuration from the base service
+  - Configuration is merged at the section level (`build`, `run`, `deploy`)
+  - You can override specific sections by redefining them
+</ParamField>
+
+## Build Configuration
+
+The `build` section defines how your application should be built before deployment.
+
+### base
+
+<ParamField path="build.base" type="string | string[]" required>
+  Sets the base technology for the build environment. See [available base technologies](/zerops-yaml/base-list).
+  
+  ```yaml
+  build:
+    base: nodejs@latest
+  ```
+  
+  You can specify multiple technologies:
+  
+  ```yaml
+  build:
+    base:
+      - nodejs@latest
+    prepareCommands:
+      - zsc add python@3.9
+  ```
+</ParamField>
+
+### os
+
+<ParamField path="build.os" type="string" default="alpine">
+  Sets the operating system for the build environment.
+  
+  **Options:**
+  - `alpine` (default)
+  - `ubuntu`
+  
+  ```yaml
+  build:
+    os: ubuntu
+  ```
+</ParamField>
+
+### prepareCommands
+
+<ParamField path="build.prepareCommands" type="string[]">
+  Commands to customize the build environment by installing additional dependencies or tools.
+  
+  ```yaml
+  build:
+    prepareCommands:
+      - sudo apt-get update
+      - sudo apt-get install -y some-package
+  ```
+</ParamField>
+
+### buildCommands
+
+<ParamField path="build.buildCommands" type="string[]">
+  Commands to build your application.
+  
+  ```yaml
+  build:
+    buildCommands:
+      - npm install
+      - npm run build
+  ```
+  
+  **Run commands in a single shell instance:**
+  
+  ```yaml
+  buildCommands:
+    - |
+      npm install
+      npm run build
+  ```
+</ParamField>
+
+### deployFiles
+
+<ParamField path="build.deployFiles" type="string | string[]" required>
+  Files or folders to deploy after a successful build. Files are placed in `/var/www` in the runtime container.
+  
+  ```yaml
+  build:
+    deployFiles:
+      - dist
+      - package.json
+      - node_modules
+  ```
+  
+  **Using wildcards:**
+  
+  The `~` character acts as a wildcard for one or more folders:
+  
+  ```yaml
+  # Deploys all file.txt files in any path beginning with /path/ and ending with /to/
+  deployFiles: ./path/~/to/file.txt
+  ```
+  
+  ```yaml
+  # ./src/assets/fonts -> /var/www/fonts (shortened path)
+  deployFiles: ./src/assets/~fonts
+  ```
+  
+  **Using .deployignore:**
+  
+  Add a `.deployignore` file to your project root to exclude files during deployment. Uses the same pattern format as [`.gitignore`](https://git-scm.com/docs/gitignore#_pattern_format).
+  
+  ```text title=".deployignore"
+  /src/file.txt        # Ignores file only in root src directory
+  src/file.txt         # Ignores file in any directory named src
+  ```
+</ParamField>
+
+### cache
+
+<ParamField path="build.cache" type="string | string[]">
+  Files or folders to cache for subsequent builds.
+  
+  ```yaml
+  build:
+    cache: node_modules
+  ```
+  
+  For detailed information, see the [build cache guide](/features/build-cache).
+</ParamField>
+
+### addToRunPrepare
+
+<ParamField path="build.addToRunPrepare" type="string | string[]">
+  Files or folders to copy from the build container to the prepare runtime container.
+</ParamField>
+
+### envVariables
+
+<ParamField path="build.envVariables" type="object">
+  Environment variables for the build environment.
+  
+  ```yaml
+  build:
+    envVariables:
+      DB_NAME: db
+      DB_HOST: db
+      DB_USER: db
+      DB_PASS: ${db_password}
+  ```
+  
+  <Info>
+  The `yamlPreprocessor` option in your import YAML allows you to generate random values and keys. See [yamlPreprocessor](/references/import-yaml/pre-processor).
+  </Info>
+</ParamField>
+
+## Deploy Configuration
+
+The `deploy` section controls deployment behavior.
+
+### temporaryShutdown
+
+<ParamField path="deploy.temporaryShutdown" type="boolean" default={false}>
+  Controls the container replacement order during deployment.
+  
+  ```yaml
+  deploy:
+    temporaryShutdown: true
+  ```
+  
+  - **`false` (default):** New containers start before old containers are removed (zero-downtime)
+  - **`true`:** Old containers are removed before new containers start (temporary downtime, fewer resources)
+</ParamField>
+
+### readinessCheck
+
+<ParamField path="deploy.readinessCheck" type="object">
+  Defines a readiness check to verify if a new deployment is ready to receive traffic. Requires either `httpGet` or `exec`.
+  
+  ```yaml
+  deploy:
+    readinessCheck:
+      httpGet:
+        port: 80
+        path: /status
+        host: my-host.zerops
+        scheme: https
+      failureTimeout: 60
+      retryPeriod: 10
+  ```
+</ParamField>
+
+#### readinessCheck.httpGet
+
+<ParamField path="deploy.readinessCheck.httpGet" type="object">
+  Configure HTTP GET health check.
+  
+  **Parameters:**
+  - `port` (required) - Port number for the HTTP request
+  - `path` (required) - URL path for the HTTP request
+  - `host` - Host header for the request (default: localhost)
+  - `scheme` - HTTP or HTTPS (default: HTTP)
+  
+  ```yaml
+  readinessCheck:
+    httpGet:
+      port: 3000
+      path: /health
+      scheme: https
+  ```
+</ParamField>
+
+#### readinessCheck.exec
+
+<ParamField path="deploy.readinessCheck.exec" type="object">
+  Configure command-based health check.
+  
+  **Parameters:**
+  - `command` (required) - Shell command to execute
+  
+  ```yaml
+  readinessCheck:
+    exec:
+      command: curl -s http://localhost/status | grep OK
+  ```
+</ParamField>
+
+#### readinessCheck.failureTimeout
+
+<ParamField path="deploy.readinessCheck.failureTimeout" type="number">
+  Time in seconds until container is marked as failed.
+</ParamField>
+
+#### readinessCheck.retryPeriod
+
+<ParamField path="deploy.readinessCheck.retryPeriod" type="number">
+  Time interval in seconds between readiness check attempts.
+</ParamField>
+
+## Runtime Configuration
+
+The `run` section defines how your application runs in production.
+
+### base
+
+<ParamField path="run.base" type="string">
+  Sets the base technology for the runtime environment. If not specified, the current version is maintained.
+  
+  ```yaml
+  run:
+    base: nodejs@latest
+  ```
+</ParamField>
+
+### os
+
+<ParamField path="run.os" type="string">
+  Sets the operating system for the runtime environment. Same options as build.os.
+</ParamField>
+
+### ports
+
+<ParamField path="run.ports" type="array">
+  Internal ports on which your application will listen.
+  
+  ```yaml
+  run:
+    ports:
+      - port: 8080
+        protocol: TCP
+        httpSupport: true
+      - port: 8081
+        protocol: UDP
+  ```
+</ParamField>
+
+#### ports[].port
+
+<ParamField path="run.ports[].port" type="number" required>
+  Port number between 10 and 65435.
+</ParamField>
+
+#### ports[].protocol
+
+<ParamField path="run.ports[].protocol" type="string" default="TCP">
+  Network protocol: `TCP` or `UDP`
+</ParamField>
+
+#### ports[].httpSupport
+
+<ParamField path="run.ports[].httpSupport" type="boolean" default={false}>
+  Set to `true` if a web server is running on this port. Only available with TCP protocol.
+</ParamField>
+
+### prepareCommands
+
+<ParamField path="run.prepareCommands" type="string[]">
+  Commands to customize the runtime environment.
+</ParamField>
+
+### initCommands
+
+<ParamField path="run.initCommands" type="string[]">
+  Commands to run each time a runtime container starts or restarts.
+  
+  ```yaml
+  run:
+    initCommands:
+      - rm -rf ./cache
+  ```
+</ParamField>
+
+### start
+
+<ParamField path="run.start" type="string">
+  Start command for your application. Either `start` or `startCommands` is required.
+  
+  ```yaml
+  run:
+    start: npm start
+  ```
+</ParamField>
+
+### startCommands
+
+<ParamField path="run.startCommands" type="array">
+  Define multiple start commands that run their own processes.
+  
+  ```yaml
+  run:
+    startCommands:
+      - command: npm run start:prod
+        name: server
+      - command: litestream replicate -config=litestream.yaml
+        name: replication
+        initCommands:
+          - litestream restore -if-replica-exists -config=litestream.yaml
+  ```
+  
+  See [start-commands-example](https://github.com/zeropsio/start-commands-example) for more details.
+</ParamField>
+
+### documentRoot
+
+<ParamField path="run.documentRoot" type="string">
+  Root folder for publicly accessible web server content. **Available only for webserver runtimes.**
+  
+  ```yaml
+  run:
+    documentRoot: public
+  ```
+</ParamField>
+
+### siteConfigPath
+
+<ParamField path="run.siteConfigPath" type="string">
+  Path to custom webserver configuration. **Available only for webserver runtimes.**
+</ParamField>
+
+### envVariables
+
+<ParamField path="run.envVariables" type="object">
+  Environment variables for the runtime environment.
+  
+  ```yaml
+  run:
+    envVariables:
+      DB_NAME: db
+      DB_HOST: db
+      DB_USER: db
+      DB_PASS: ${db_password}
+      NODE_ENV: production
+  ```
+</ParamField>
+
+### envReplace
+
+<ParamField path="run.envReplace" type="object">
+  Automatically replace environment variable placeholders in static files during deployment.
+  
+  ```yaml
+  run:
+    envReplace:
+      delimiter: "%%"
+      target:
+        - config/jwt/public.pem
+        - config/jwt/private.pem
+        - ./config/
+  ```
+</ParamField>
+
+#### envReplace.delimiter
+
+<ParamField path="run.envReplace.delimiter" type="string | string[]" required>
+  Characters that wrap variable names in placeholders (e.g., `%%` means `%%VARIABLE%%`).
+  
+  Supports multiple delimiters:
+  
+  ```yaml
+  delimiter:
+    - "%%"
+    - "@@"
+  ```
+</ParamField>
+
+#### envReplace.target
+
+<ParamField path="run.envReplace.target" type="string | string[]" required>
+  Files or directories to process for variable replacement.
+  
+  <Warning>
+  Directory targets only process files directly in the specified directory, not subdirectories. To process subdirectories, specify each one explicitly.
+  </Warning>
+  
+  **Example:**
+  
+  File content before:
+  ```
+  %%JWT_PUBLIC_KEY_CONTENT%%
+  ```
+  
+  Environment variable:
+  ```
+  JWT_PUBLIC_KEY_CONTENT=-----BEGIN PUBLIC KEY-----...
+  ```
+  
+  The placeholder gets replaced with the actual value during deployment.
+</ParamField>
+
+### routing
+
+<ParamField path="run.routing" type="object">
+  Configure URL routing, redirects, and HTTP headers. **Only for Static services.**
+  
+  ```yaml
+  run:
+    routing:
+      root: /custom/root
+      cors: "'*' always"
+      redirects:
+        - from: /old-path
+          to: /new-path
+          status: 301
+      headers:
+        - for: "/*"
+          values:
+            X-Frame-Options: "'DENY'"
+  ```
+</ParamField>
+
+#### routing.root
+
+<ParamField path="run.routing.root" type="string">
+  Custom root directory for the service.
+</ParamField>
+
+#### routing.cors
+
+<ParamField path="run.routing.cors" type="string">
+  Enable CORS headers for cross-origin requests.
+  
+  ```yaml
+  cors: "'*' always"
+  ```
+  
+  <Info>
+  Special case: `"*"` is automatically converted to `'*'`
+  </Info>
+</ParamField>
+
+#### routing.redirects
+
+<ParamField path="run.routing.redirects" type="array">
+  Define URL redirects and rewrites.
+  
+  **Each redirect object supports:**
+  - `from` (required) - Source path to match (supports wildcards with `*`)
+  - `to` (required) - Destination path
+  - `status` - HTTP status code (required for absolute URLs)
+  - `preservePath` - Preserve path after wildcard match
+  - `preserveQuery` - Preserve query parameters
+  
+  ```yaml
+  redirects:
+    - from: /old-page
+      to: /new-page
+      status: 301
+    - from: /blog/*
+      to: /articles/
+      preservePath: true
+      status: 302
+  ```
+</ParamField>
+
+#### routing.headers
+
+<ParamField path="run.routing.headers" type="array">
+  Set custom HTTP headers for specific paths.
+  
+  **Each header object supports:**
+  - `for` (required) - Path pattern to match
+  - `values` (required) - Object with header name/value pairs
+  
+  ```yaml
+  headers:
+    - for: "/*"
+      values:
+        X-Frame-Options: "'DENY'"
+        Content-Security-Policy: '"default-src \'self\'"'
+  ```
+</ParamField>
+
+### healthCheck
+
+<ParamField path="run.healthCheck" type="object">
+  Define a health check for your running application.
+  
+  ```yaml
+  run:
+    healthCheck:
+      httpGet:
+        port: 80
+        path: /status
+      failureTimeout: 60
+      disconnectTimeout: 30
+      recoveryTimeout: 30
+      execPeriod: 10
+  ```
+</ParamField>
+
+#### healthCheck.httpGet
+
+<ParamField path="run.healthCheck.httpGet" type="object">
+  Configure HTTP GET health check.
+  
+  **Parameters:**
+  - `port` (required) - Port number
+  - `path` (required) - URL path
+  - `host` - Host header
+  - `scheme` - HTTP or HTTPS
+  
+  ```yaml
+  healthCheck:
+    httpGet:
+      port: 8080
+      path: /health
+      scheme: https
+  ```
+</ParamField>
+
+#### healthCheck.exec
+
+<ParamField path="run.healthCheck.exec" type="object">
+  Configure command-based health check.
+  
+  **Parameters:**
+  - `command` (required) - Shell command
+  
+  ```yaml
+  healthCheck:
+    exec:
+      command: |
+        curl -s http://localhost:8080/status > /tmp/status
+        grep -q "OK" /tmp/status
+  ```
+</ParamField>
+
+#### healthCheck.failureTimeout
+
+<ParamField path="run.healthCheck.failureTimeout" type="number">
+  Time in seconds until container fails after consecutive health check failures.
+</ParamField>
+
+#### healthCheck.disconnectTimeout
+
+<ParamField path="run.healthCheck.disconnectTimeout" type="number">
+  Time in seconds until container is disconnected and becomes publicly unavailable.
+</ParamField>
+
+#### healthCheck.recoveryTimeout
+
+<ParamField path="run.healthCheck.recoveryTimeout" type="number">
+  Time in seconds until container is connected and becomes publicly available.
+</ParamField>
+
+#### healthCheck.execPeriod
+
+<ParamField path="run.healthCheck.execPeriod" type="number">
+  Time interval in seconds between health check attempts.
+</ParamField>
+
+### crontab
+
+<ParamField path="run.crontab" type="array">
+  Define scheduled commands to run as cron jobs.
+  
+  ```yaml
+  run:
+    crontab:
+      - command: "date >> /var/log/cron.log"
+        timing: "0 * * * *"
+        allContainers: false
+        workingDir: /var/www
+  ```
+  
+  **Each cron job supports:**
+  - `command` (required) - Shell command to execute
+  - `timing` (required) - Cron format schedule (minute hour day month weekday)
+  - `allContainers` (required) - Run on all containers (true) or one (false)
+  - `workingDir` - Working directory (default: /var/www)
+  
+  See [cron examples](/zerops-yaml/cron) for more details.
+</ParamField>
+
+## Complete Example
+
+Here's a comprehensive example showing multiple services with various configurations:
+
+<CodeGroup>
+```yaml Node.js API
+zerops:
+  - setup: api
+    build:
+      base: nodejs@20
+      os: alpine
+      prepareCommands:
+        - corepack enable
+      buildCommands:
+        - pnpm install --frozen-lockfile
+        - pnpm run build
+      deployFiles:
+        - dist
+        - node_modules
+        - package.json
+      cache:
+        - node_modules
+        - .pnpm-store
+    deploy:
+      readinessCheck:
+        httpGet:
+          port: 3000
+          path: /health
+        failureTimeout: 60
+    run:
+      base: nodejs@20
+      ports:
+        - port: 3000
+          httpSupport: true
+      start: node dist/index.js
+      envVariables:
+        NODE_ENV: production
+        PORT: "3000"
+      healthCheck:
+        httpGet:
+          port: 3000
+          path: /health
+        failureTimeout: 60
+        execPeriod: 10
+```
+
+```yaml PHP Laravel
+zerops:
+  - setup: app
+    build:
+      base: php@8.3
+      buildCommands:
+        - composer install --no-dev --optimize-autoloader
+        - php artisan config:cache
+        - php artisan route:cache
+        - php artisan view:cache
+      deployFiles: ./
+      cache: vendor
+    run:
+      base: php-nginx@8.3
+      documentRoot: public
+      ports:
+        - port: 80
+          httpSupport: true
+      initCommands:
+        - php artisan migrate --force
+      envVariables:
+        APP_ENV: production
+      crontab:
+        - command: "php artisan schedule:run"
+          timing: "* * * * *"
+          allContainers: false
+```
+
+```yaml Python FastAPI
+zerops:
+  - setup: api
+    build:
+      base: python@3.11
+      os: ubuntu
+      buildCommands:
+        - pip install -r requirements.txt
+      deployFiles:
+        - .
+        - "!tests"
+        - "!.git"
+    run:
+      start: uvicorn main:app --host 0.0.0.0 --port 8000
+      ports:
+        - port: 8000
+          httpSupport: true
+      envVariables:
+        PYTHONUNBUFFERED: "1"
+      healthCheck:
+        httpGet:
+          port: 8000
+          path: /health
+```
+
+```yaml Static React
+zerops:
+  - setup: frontend
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles: ./dist
+      cache: node_modules
+    run:
+      base: static@latest
+      routing:
+        cors: "'*' always"
+        redirects:
+          - from: /*
+            to: /index.html
+            preservePath: true
+```
+</CodeGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="book-open" href="/zerops-yaml/overview">
+    Quick introduction to zerops.yaml
+  </Card>
+  <Card title="Base Technologies" icon="layer-group" href="/zerops-yaml/base-list">
+    Available runtime and build technologies
+  </Card>
+  <Card title="Cron Jobs" icon="clock" href="/zerops-yaml/cron">
+    Schedule automated tasks
+  </Card>
+  <Card title="Build Cache" icon="database" href="/features/build-cache">
+    Optimize build times with caching
+  </Card>
+</CardGroup>
+
+*Need help? Join our [Discord community](https://discord.gg/zeropsio).*

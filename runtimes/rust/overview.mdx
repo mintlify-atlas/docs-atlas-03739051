@@ -1,0 +1,423 @@
+---
+title: Rust Runtime
+description: Deploy and scale Rust applications on Zerops with automatic compilation and maximum performance.
+---
+
+## What is Rust on Zerops?
+
+Zerops provides a fully managed Rust runtime environment with automatic compilation, built-in Cargo support, and zero-config deployment. Build and deploy high-performance, memory-safe Rust applications with enterprise-grade reliability.
+
+<Info>
+Rust is a language empowering everyone to build reliable and efficient software. [Learn more about Rust →](https://www.rust-lang.org/)
+</Info>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Latest Rust Versions" icon="code">
+    Support for Rust 1.70 through latest stable versions
+  </Card>
+  <Card title="Automatic Scaling" icon="chart-line">
+    Horizontal and vertical auto-scaling based on actual resource usage
+  </Card>
+  <Card title="Cargo Integration" icon="box">
+    Built-in Cargo support for dependency management and builds
+  </Card>
+  <Card title="Zero-Cost Abstractions" icon="bolt">
+    Deploy compiled Rust binaries for maximum performance
+  </Card>
+</CardGroup>
+
+## Supported Versions
+
+Zerops supports multiple Rust versions:
+
+- Rust 1.75 (Latest stable)
+- Rust 1.74
+- Rust 1.73
+- Rust 1.70+
+
+<Note>
+You can change the Rust version at any time through the `zerops.yaml` configuration.
+</Note>
+
+## Quick Example
+
+Deploy a Rust application in minutes:
+
+```yaml
+project:
+  name: my-rust-app
+services:
+  - hostname: app
+    type: rust@latest
+    minContainers: 1
+    maxContainers: 3
+    buildFromGit: https://github.com/zeropsio/recipe-rust-hello-world@main
+    enableSubdomainAccess: true
+```
+
+## Runtime Environment
+
+The Rust runtime environment includes:
+
+- Alpine Linux (default) or Ubuntu
+- Rust toolchain (rustc, cargo)
+- Build essentials
+- Git utilities
+- Zerops CLI tools
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Web APIs with Actix">
+    Build high-performance web services with Actix-web.
+    
+    ```yaml
+    zerops:
+      - setup: api
+        build:
+          base: rust@latest
+          buildCommands:
+            - cargo build --release
+          deployFiles:
+            - target/release/app
+        run:
+          start: ./target/release/app
+          ports:
+            - port: 8080
+    ```
+  </Accordion>
+  
+  <Accordion title="Async Web Services with Tokio">
+    Deploy async applications with Tokio and axum.
+    
+    ```yaml
+    zerops:
+      - setup: web
+        build:
+          base: rust@latest
+          buildCommands:
+            - cargo build --release --bin web-server
+          deployFiles:
+            - target/release/web-server
+        run:
+          start: ./target/release/web-server
+    ```
+  </Accordion>
+  
+  <Accordion title="Microservices">
+    Create lightweight, efficient microservices.
+    
+    ```yaml
+    zerops:
+      - setup: service
+        build:
+          base: rust@latest
+          buildCommands:
+            - cargo build --release
+          deployFiles:
+            - target/release/service
+            - config
+        run:
+          start: ./target/release/service
+    ```
+  </Accordion>
+  
+  <Accordion title="Background Workers">
+    Deploy async task processors and workers.
+    
+    ```yaml
+    zerops:
+      - setup: worker
+        build:
+          base: rust@latest
+          buildCommands:
+            - cargo build --release --bin worker
+          deployFiles:
+            - target/release/worker
+        run:
+          start: ./target/release/worker
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Process
+
+### Standard Build
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: rust@latest
+      buildCommands:
+        - cargo build --release
+      deployFiles:
+        - target/release/app
+      cache: target
+```
+
+### Optimized Build
+
+Create smaller, optimized binaries:
+
+```yaml
+build:
+  base: rust@latest
+  buildCommands:
+    - cargo build --release
+    - strip target/release/app
+  deployFiles:
+    - target/release/app
+```
+
+### Workspace Build
+
+Build Rust workspaces with multiple crates:
+
+```yaml
+build:
+  base: rust@latest
+  buildCommands:
+    - cargo build --release --workspace
+  deployFiles:
+    - target/release/api
+    - target/release/worker
+```
+
+## Runtime Configuration
+
+### Simple HTTP Server
+
+```yaml
+run:
+  start: ./target/release/app
+  ports:
+    - port: 8080
+      httpSupport: true
+```
+
+### With Environment Variables
+
+```yaml
+run:
+  start: ./target/release/app
+  envVariables:
+    RUST_LOG: info
+    APP_ENV: production
+```
+
+### Health Check
+
+```yaml
+run:
+  start: ./target/release/app
+  healthCheck:
+    httpGet:
+      port: 8080
+      path: /health
+```
+
+## Advanced Build Configurations
+
+### With System Dependencies
+
+```yaml
+build:
+  base: rust@latest
+  os: ubuntu
+  prepareCommands:
+    - sudo apt-get update
+    - sudo apt-get install -y libpq-dev
+    - sudo apt-get install -y libssl-dev
+  buildCommands:
+    - cargo build --release
+  deployFiles:
+    - target/release/app
+```
+
+### Cross-Compilation
+
+```yaml
+build:
+  base: rust@latest
+  prepareCommands:
+    - rustup target add x86_64-unknown-linux-musl
+  buildCommands:
+    - cargo build --release --target x86_64-unknown-linux-musl
+  deployFiles:
+    - target/x86_64-unknown-linux-musl/release/app
+```
+
+### Feature Flags
+
+```yaml
+build:
+  buildCommands:
+    - cargo build --release --features production
+```
+
+## Environment Variables
+
+Set runtime configuration:
+
+```yaml
+run:
+  envVariables:
+    RUST_LOG: info
+    RUST_BACKTRACE: 1
+    APP_ENV: production
+    PORT: 8080
+```
+
+Access in Rust:
+
+```rust
+use std::env;
+
+fn main() {
+    let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+}
+```
+
+## Common Frameworks
+
+### Actix-web
+
+```rust title="src/main.rs"
+use actix_web::{web, App, HttpServer, Responder};
+
+async fn index() -> impl Responder {
+    "Hello from Actix on Zerops!"
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .route("/", web::get().to(index))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
+}
+```
+
+### Axum
+
+```rust title="src/main.rs"
+use axum::{
+    routing::get,
+    Router,
+};
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new().route("/", get(|| async { "Hello from Axum on Zerops!" }));
+    
+    axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+```
+
+### Rocket
+
+```rust title="src/main.rs"
+#[macro_use] extern crate rocket;
+
+#[get("/")]
+fn index() -> &'static str {
+    "Hello from Rocket on Zerops!"
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![index])
+}
+```
+
+## Database Integration
+
+### PostgreSQL with SQLx
+
+```rust
+use sqlx::postgres::PgPoolOptions;
+use std::env;
+
+#[tokio::main]
+async fn main() -> Result<(), sqlx::Error> {
+    let database_url = format!(
+        "postgres://{}:{}@db/{}",
+        env::var("DB_USER").unwrap(),
+        env::var("DB_PASSWORD").unwrap(),
+        env::var("DB_NAME").unwrap(),
+    );
+    
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+    
+    Ok(())
+}
+```
+
+### Redis Connection
+
+```rust
+use redis::Client;
+
+fn main() {
+    let client = Client::open("redis://redis:6379").unwrap();
+    let mut con = client.get_connection().unwrap();
+}
+```
+
+## Performance Optimization
+
+### Build Cache
+
+Cache build artifacts for faster builds:
+
+```yaml
+build:
+  cache:
+    - target
+    - ~/.cargo/registry
+    - ~/.cargo/git
+```
+
+### Release Optimizations
+
+Add to `Cargo.toml`:
+
+```toml
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+```
+
+### Parallel Compilation
+
+```yaml
+build:
+  buildCommands:
+    - cargo build --release -j 4
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/runtimes/rust/quickstart">
+    Deploy your first Rust application
+  </Card>
+  <Card title="Example Projects" icon="github" href="https://github.com/zeropsio/recipe-rust-hello-world">
+    Explore Rust examples on GitHub
+  </Card>
+</CardGroup>

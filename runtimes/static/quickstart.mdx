@@ -1,0 +1,432 @@
+---
+title: Static Service Quickstart
+description: Deploy your static site to Zerops in minutes with simplified configuration and intelligent routing.
+---
+
+This guide will help you deploy a static site to Zerops using the Static service. You'll learn how to set up the service, configure routing, and deploy your application.
+
+## Prerequisites
+
+- A Zerops account ([sign up](https://zerops.io) if you don't have one)
+- A project in Zerops (create one in the GUI if needed)
+- Static files to deploy (HTML, CSS, JS) or a framework that builds to static files
+
+## Step 1: Create Static Service
+
+<Tabs>
+  <Tab title="Using GUI">
+    1. Go to your project dashboard in Zerops
+    2. Click **Add new service**
+    3. Select **Static** as the service type
+    4. Set a unique hostname (e.g., `app`, `web`, `site`)
+    5. Configure scaling settings (optional)
+    6. Click **Create service**
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    Create a `description.yaml` file:
+
+    ```yaml description.yaml
+    project:
+      name: my-static-site
+    services:
+      - hostname: app
+        type: static
+        minContainers: 1
+        maxContainers: 3
+    ```
+
+    Import the project:
+
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+</Tabs>
+
+## Step 2: Configure Your Application
+
+Create a `zerops.yaml` file in your repository root.
+
+<Tabs>
+  <Tab title="Simple Static Files">
+    If you have pre-built static files:
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        run:
+          base: static
+    ```
+
+    That's it! This minimal configuration:
+    - Serves your static files
+    - Handles SPA routing automatically
+    - Uses sensible defaults
+
+    <Info>
+      Deploy your files using `zcli push` from your project directory.
+    </Info>
+  </Tab>
+  
+  <Tab title="With Build Step">
+    For frameworks like React, Vue, or Angular:
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        build:
+          base: nodejs@20
+          buildCommands:
+            - npm install
+            - npm run build
+          deployFiles:
+            - dist/~
+          cache: node_modules
+        run:
+          base: static
+    ```
+
+    This configuration:
+    - Uses Node.js to build your app
+    - Deploys the `dist` folder content
+    - Caches node_modules for faster builds
+    - Serves with the Static service
+  </Tab>
+  
+  <Tab title="With Custom Routing">
+    Add custom redirects and CORS:
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        build:
+          base: nodejs@20
+          buildCommands:
+            - npm install
+            - npm run build
+          deployFiles:
+            - build/~
+        run:
+          base: static
+          routing:
+            # Enable CORS for API calls
+            cors: "*"
+            
+            # Custom redirects
+            redirects:
+              # Permanent redirect
+              - from: /old-page
+                to: /new-page
+                status: 301
+              
+              # Redirect old blog posts
+              - from: /blog/*
+                to: /articles/
+                preservePath: true
+                status: 301
+    ```
+  </Tab>
+</Tabs>
+
+## Step 3: Deploy
+
+<Tabs>
+  <Tab title="From Git Repository">
+    1. Go to your service in Zerops GUI
+    2. Click **Connect to GitHub/GitLab**
+    3. Authorize and select your repository
+    4. Choose the branch
+    5. Enable **Deploy on push** for automatic deployments
+    6. Click **Deploy**
+
+    <Tip>
+      Every push to your selected branch will trigger an automatic deployment.
+    </Tip>
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    From your project directory:
+
+    ```bash
+    # Login if needed
+    zcli login
+
+    # Push and deploy
+    zcli push
+    ```
+
+    Watch the build and deployment logs in real-time.
+  </Tab>
+</Tabs>
+
+## Step 4: Set Up Public Access
+
+1. Navigate to your service in Zerops GUI
+2. Go to **Public access & routing**
+3. Click **Add new routing rule**
+4. Choose:
+   - **Zerops subdomain** (e.g., `myapp.zerops.app`), or
+   - **Custom domain** (requires DNS configuration)
+5. Save the routing rule
+
+Your site is now live!
+
+## Common Examples
+
+### React Application
+
+```yaml zerops.yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles:
+        - build/~
+      cache: node_modules
+    run:
+      base: static
+```
+
+### Vue Application with Custom Redirects
+
+```yaml zerops.yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles:
+        - dist/~
+    run:
+      base: static
+      routing:
+        redirects:
+          # Redirect www to non-www
+          - from: https://www.example.com/*
+            to: https://example.com
+            status: 301
+            preservePath: true
+```
+
+### Gatsby Site with SEO
+
+```yaml zerops.yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles:
+        - public/~
+      cache:
+        - node_modules
+        - .cache
+    run:
+      base: static
+      # Prerender.io token set as secret in Zerops GUI
+```
+
+### Multi-Domain Landing Pages
+
+```yaml zerops.yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm install
+        - npm run build
+      deployFiles:
+        - dist/~
+    run:
+      base: static
+      routing:
+        redirects:
+          # Product promo domain
+          - from: https://promo.example.com/*
+            to: https://example.com/special-offer
+            status: 302
+          
+          # Legacy domain
+          - from: https://old-site.com/*
+            to: https://example.com
+            status: 301
+            preservePath: true
+```
+
+## Routing Patterns
+
+### Masked Redirects
+
+Show content from one URL while keeping another URL in the browser:
+
+```yaml
+routing:
+  redirects:
+    # URL stays /about, but shows content from /about-us
+    - from: /about
+      to: /about-us
+```
+
+<Info>
+  No status code means it's a masked redirect. Perfect for URL aliases.
+</Info>
+
+### Path Preservation
+
+Maintain the path when redirecting:
+
+```yaml
+routing:
+  redirects:
+    # /blog/post-1 → /articles/post-1
+    - from: /blog/*
+      to: /articles/
+      preservePath: true
+      status: 301
+```
+
+<Warning>
+  When using `preservePath` with wildcards, ensure the `to` path ends with `/` for proper concatenation.
+</Warning>
+
+### Domain Redirects
+
+```yaml
+routing:
+  redirects:
+    # Redirect old domain to new
+    - from: https://old-domain.com/*
+      to: https://new-domain.com
+      status: 301
+      preserveQuery: true
+    
+    # Redirect all subdomains
+    - from: https://*.staging.com/*
+      to: https://production.com
+      status: 302
+```
+
+## SEO Optimization
+
+Enable Prerender.io for search engine visibility:
+
+1. Sign up for [Prerender.io](https://prerender.io)
+2. In Zerops GUI, add secret variable:
+   - Name: `PRERENDER_TOKEN`
+   - Value: Your Prerender.io token
+3. (Optional) Set custom host in `zerops.yaml`:
+
+```yaml
+run:
+  base: static
+  envVariables:
+    PRERENDER_HOST: custom.prerender.host
+```
+
+<Info>
+  Prerender automatically detects crawlers from Google, Bing, social media platforms, and AI tools (ChatGPT, Perplexity, Claude).
+</Info>
+
+## Security Headers
+
+Add security headers for production:
+
+```yaml
+zerops:
+  - setup: app
+    run:
+      base: static
+      routing:
+        headers:
+          - for: "/"
+            values:
+              X-Frame-Options: "'DENY'"
+              X-Content-Type-Options: "'nosniff' always"
+              X-XSS-Protection: "'1; mode=block' always"
+              # CSP with escaped quotes
+              Content-Security-Policy: '"default-src ''self''" always'
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="404 on page refresh (SPA routing)">
+    The Static service handles this automatically. If you're getting 404s:
+    - Check that you have an `index.html` in your root
+    - Verify your `deployFiles` path is correct
+    - Make sure you haven't overridden the default routing
+  </Accordion>
+  
+  <Accordion title="CORS errors">
+    Add CORS configuration:
+    ```yaml
+    routing:
+      cors: "*"
+    ```
+  </Accordion>
+  
+  <Accordion title="Redirect not working">
+    Check:
+    - Status code is required for absolute URLs
+    - Path preservation needs trailing `/` in target
+    - Exact matches take priority over wildcards
+    - Review logs in Zerops GUI for errors
+  </Accordion>
+  
+  <Accordion title="Build files not found">
+    Verify your framework's output directory matches `deployFiles`:
+    - React: `build/` (Create React App) or `dist/` (Vite)
+    - Vue: `dist/`
+    - Angular: `dist/<project-name>/`
+    - Next.js: `.next/` (static export)
+  </Accordion>
+  
+  <Accordion title="Custom headers not applied">
+    Remember to quote header values:
+    - Correct: `X-Frame-Options: "'DENY'"`
+    - Wrong: `X-Frame-Options: DENY`
+  </Accordion>
+</AccordionGroup>
+
+## Migration from Full Nginx
+
+If you're migrating from a full Nginx service:
+
+1. Review your current Nginx configuration
+2. Map Nginx directives to Static service YAML:
+   - `try_files` → Built-in default behavior
+   - `rewrite` → `routing.redirects`
+   - `add_header` for CORS → `routing.cors`
+   - Other headers → `routing.headers`
+3. Test thoroughly in a development environment
+4. Deploy to production
+
+<Tip>
+  If you need features not available in Static service, you can always switch back to full Nginx using the migration tool in the GUI.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Routing" icon="route" href="/runtimes/static/routing">
+    Learn complex routing patterns
+  </Card>
+  <Card title="Framework Examples" icon="code" href="/runtimes/static/frameworks">
+    See framework-specific guides
+  </Card>
+  <Card title="Custom Headers" icon="shield" href="/runtimes/static/security">
+    Set up security headers
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/runtimes/static/environment">
+    Configure environment variables
+  </Card>
+</CardGroup>

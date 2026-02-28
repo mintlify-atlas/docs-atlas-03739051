@@ -1,0 +1,791 @@
+---
+title: Import YAML Reference
+description: Complete reference for defining and importing projects and services using YAML configuration
+---
+
+The Zerops Import YAML provides a powerful way to define your infrastructure as code. You can create or replicate entire projects and services using a declarative YAML configuration file.
+
+## Import Methods
+
+You can import configurations in two ways:
+
+**Using the GUI:**
+- **For projects**: Click **Import a project** in the Projects section of the Zerops dashboard
+- **For services**: Navigate to a project's details page and click **Import services**
+
+**Using the CLI:**
+- `zcli project project-import <importYamlPath>` - Import entire project
+- `zcli project service-import <importYamlPath>` - Import services into existing project
+
+## File Structure
+
+The import YAML consists of two main sections:
+
+```yaml
+# Project definition (optional, required for project import)
+project:
+  name: my-project
+  description: "Project description"
+  corePackage: LIGHT
+  tags:
+    - production
+  envVariables:
+    LOG_LEVEL: info
+
+# Services definition (required)
+services:
+  - hostname: app
+    type: nodejs@22
+    mode: HA
+    ...
+```
+
+## Project Configuration
+
+### project
+
+<ParamField path="project" type="object">
+  Define a project to import. Required when importing a whole project, omitted when importing services into an existing project.
+</ParamField>
+
+### project.name
+
+<ParamField path="project.name" type="string" required>
+  The name of the new project. Duplicates are allowed.
+  
+  ```yaml
+  project:
+    name: my-project
+  ```
+</ParamField>
+
+### project.description
+
+<ParamField path="project.description" type="string">
+  Description of the new project.
+  
+  ```yaml
+  project:
+    description: "Production environment for my application"
+  ```
+</ParamField>
+
+### project.corePackage
+
+<ParamField path="project.corePackage" type="string" default="LIGHT">
+  [Core package](/features/infrastructure#project-core-options) of the new project.
+  
+  **Values:**
+  - `LIGHT` - Lightweight Core (default)
+  - `SERIOUS` - Serious Core
+  
+  ```yaml
+  project:
+    corePackage: SERIOUS
+  ```
+  
+  <Warning>
+  The `corePackage` can be upgraded from Lightweight to Serious later, but cannot be downgraded. Upgrades involve a brief service disruption and are partially destructive (logs/statistics are lost). Learn more about the [core upgrade process](/features/infrastructure#project-core-upgrade).
+  </Warning>
+</ParamField>
+
+### project.tags
+
+<ParamField path="project.tags" type="string[]">
+  One or more tags for better project organization and filtering.
+  
+  ```yaml
+  project:
+    tags:
+      - production
+      - api
+      - customer-facing
+  ```
+</ParamField>
+
+### project.envVariables
+
+<ParamField path="project.envVariables" type="object">
+  [Project-level environment variables](/features/env-variables#project-variables) that are available to all services in the project.
+  
+  ```yaml
+  project:
+    envVariables:
+      LOG_LEVEL: info
+      API_VERSION: v1
+      REGION: us-east-1
+  ```
+</ParamField>
+
+## Service Configuration
+
+The `services` section defines one or more services to import into your project.
+
+### services
+
+<ParamField path="services" type="array" required>
+  List of services to create. At least one service is required.
+  
+  ```yaml
+  services:
+    - hostname: app
+      type: nodejs@22
+      ...
+    - hostname: db
+      type: postgresql@16
+      ...
+  ```
+</ParamField>
+
+## Service Basic Configuration
+
+### services[].hostname
+
+<ParamField path="services[].hostname" type="string" required>
+  The unique service identifier within the project.
+  
+  **Limitations:**
+  - No duplicates in the same project
+  - Maximum 25 characters
+  - Lowercase ASCII letters (a-z) or numbers (0-9) only
+  
+  ```yaml
+  services:
+    - hostname: api
+  ```
+</ParamField>
+
+### services[].type
+
+<ParamField path="services[].type" type="string" required>
+  Specifies the service type and version.
+  
+  See [supported service types](/references/import-yaml/type-list) for available options.
+  
+  ```yaml
+  services:
+    - hostname: app
+      type: nodejs@22
+  ```
+</ParamField>
+
+### services[].mode
+
+<ParamField path="services[].mode" type="string" default="NON_HA">
+  Operation mode of the service.
+  
+  **Values:**
+  - `NON_HA` - Non-High-Availability (default)
+  - `HA` - High-Availability
+  
+  ```yaml
+  services:
+    - hostname: app
+      mode: HA
+  ```
+</ParamField>
+
+### services[].envSecrets
+
+<ParamField path="services[].envSecrets" type="object">
+  Environment variables that are blurred by default in the Zerops GUI. Can be edited or deleted later.
+  
+  ```yaml
+  #yamlPreprocessor=on
+  services:
+    - hostname: app
+      envSecrets:
+        SECRET_KEY: <@generateRandomString(<32>)>
+        API_TOKEN: my-secret-token
+  ```
+  
+  <Info>
+  The `yamlPreprocessor` directive enables functions like `generateRandomString`. See [yamlPreprocessor documentation](/references/import-yaml/pre-processor).
+  </Info>
+</ParamField>
+
+### services[].dotEnvSecrets
+
+<ParamField path="services[].dotEnvSecrets" type="string">
+  Environment variables in .env file format that are automatically created as secret environment variables.
+  
+  ```yaml
+  #yamlPreprocessor=on
+  services:
+    - hostname: app
+      dotEnvSecrets: |
+        APP_KEY=<@generateRandomString(<32>)>
+        DB_PASSWORD=secure_password
+        JWT_SECRET=<@generateRandomString(<64>)>
+  ```
+</ParamField>
+
+### services[].objectStorageSize
+
+<ParamField path="services[].objectStorageSize" type="number">
+  Object storage size in GB.
+  
+  ```yaml
+  services:
+    - hostname: app
+      objectStorageSize: 10
+  ```
+</ParamField>
+
+### services[].objectStoragePolicy
+
+<ParamField path="services[].objectStoragePolicy" type="string">
+  Select a predefined AWS S3 bucket access policy.
+  
+  **Values:**
+  - `private` - No public access
+  - `public-read` - Public read access
+  - `public-objects-read` - Public read access to objects only
+  - `public-write` - Public write access
+  - `public-read-write` - Public read and write access
+  - `custom` - Use custom policy defined in `objectStorageRawPolicy`
+  
+  ```yaml
+  services:
+    - hostname: app
+      objectStoragePolicy: public-read
+  ```
+</ParamField>
+
+### services[].objectStorageRawPolicy
+
+<ParamField path="services[].objectStorageRawPolicy" type="string">
+  Define a custom AWS S3 bucket access policy. See [AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html) for details.
+  
+  Use `{{ .BucketName }}` placeholder to reference the bucket name in your policy.
+  
+  ```yaml
+  services:
+    - hostname: app
+      objectStorageRawPolicy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": ["s3:GetObject"],
+              "Resource": ["arn:aws:s3:::{{ .BucketName }}/*"]
+            }
+          ]
+        }
+  ```
+</ParamField>
+
+### services[].buildFromGit
+
+<ParamField path="services[].buildFromGit" type="string">
+  URL of a GitHub or GitLab repository for a one-time build of your service.
+  
+  ```yaml
+  services:
+    - hostname: app
+      buildFromGit: https://github.com/myorg/myapp
+  ```
+</ParamField>
+
+### services[].enableSubdomainAccess
+
+<ParamField path="services[].enableSubdomainAccess" type="boolean" default={false}>
+  Enable public access to your service via a Zerops subdomain. Not recommended for production use.
+  
+  ```yaml
+  services:
+    - hostname: app
+      enableSubdomainAccess: true
+  ```
+</ParamField>
+
+### services[].priority
+
+<ParamField path="services[].priority" type="number">
+  Services are sorted before creation by priority in descending order. Higher priority services are created first.
+  
+  ```yaml
+  services:
+    - hostname: db
+      priority: 10
+    - hostname: app
+      priority: 5
+  ```
+</ParamField>
+
+### services[].override
+
+<ParamField path="services[].override" type="boolean" default={false}>
+  For runtime services only. When set to true, replaces an existing service with the same hostname and triggers a redeploy.
+  
+  ```yaml
+  services:
+    - hostname: app
+      override: true
+  ```
+</ParamField>
+
+## Service Vertical Autoscaling
+
+Configure how services scale their resources vertically.
+
+### services[].verticalAutoscaling
+
+<ParamField path="services[].verticalAutoscaling" type="object">
+  Vertical autoscaling configuration for the service.
+  
+  ```yaml
+  services:
+    - hostname: app
+      verticalAutoscaling:
+        minCpu: 1
+        maxCpu: 3
+        cpuMode: DEDICATED
+        minRam: 1
+        maxRam: 4
+        minDisk: 1
+        maxDisk: 10
+  ```
+</ParamField>
+
+### services[].verticalAutoscaling.minCpu / maxCpu
+
+<ParamField path="services[].verticalAutoscaling.minCpu" type="number">
+  Minimum number of virtual CPUs.
+</ParamField>
+
+<ParamField path="services[].verticalAutoscaling.maxCpu" type="number">
+  Maximum number of virtual CPUs.
+</ParamField>
+
+### services[].verticalAutoscaling.cpuMode
+
+<ParamField path="services[].verticalAutoscaling.cpuMode" type="string">
+  CPU allocation mode.
+  
+  **Values:**
+  - `SHARED` - Shared CPU cores
+  - `DEDICATED` - Dedicated CPU cores
+  
+  ```yaml
+  verticalAutoscaling:
+    cpuMode: DEDICATED
+  ```
+</ParamField>
+
+### services[].verticalAutoscaling.minRam / maxRam
+
+<ParamField path="services[].verticalAutoscaling.minRam" type="number">
+  Minimum RAM in GB.
+</ParamField>
+
+<ParamField path="services[].verticalAutoscaling.maxRam" type="number">
+  Maximum RAM in GB.
+</ParamField>
+
+### services[].verticalAutoscaling.minDisk / maxDisk
+
+<ParamField path="services[].verticalAutoscaling.minDisk" type="number">
+  Minimum disk space in GB.
+</ParamField>
+
+<ParamField path="services[].verticalAutoscaling.maxDisk" type="number">
+  Maximum disk space in GB.
+</ParamField>
+
+### services[].verticalAutoscaling.startCpuCoreCount
+
+<ParamField path="services[].verticalAutoscaling.startCpuCoreCount" type="number">
+  Number of CPU cores with which each container starts.
+</ParamField>
+
+### services[].verticalAutoscaling.minFreeCpuCores
+
+<ParamField path="services[].verticalAutoscaling.minFreeCpuCores" type="number">
+  Minimum number of unused CPU cores before a container starts scaling.
+</ParamField>
+
+### services[].verticalAutoscaling.minFreeCpuPercent
+
+<ParamField path="services[].verticalAutoscaling.minFreeCpuPercent" type="number">
+  Minimum percentage of unused CPU cores before a container starts scaling.
+</ParamField>
+
+### services[].verticalAutoscaling.minFreeRamGB
+
+<ParamField path="services[].verticalAutoscaling.minFreeRamGB" type="number">
+  Minimum unused memory in GB before a container starts scaling.
+</ParamField>
+
+### services[].verticalAutoscaling.minFreeRamPercent
+
+<ParamField path="services[].verticalAutoscaling.minFreeRamPercent" type="number">
+  Minimum percentage of unused memory before a container starts scaling.
+</ParamField>
+
+## Service Horizontal Autoscaling
+
+Configure the number of containers for the service.
+
+### services[].minContainers
+
+<ParamField path="services[].minContainers" type="number" default={1}>
+  Minimum number of containers. Maximum value: 10.
+  
+  ```yaml
+  services:
+    - hostname: app
+      minContainers: 2
+  ```
+</ParamField>
+
+### services[].maxContainers
+
+<ParamField path="services[].maxContainers" type="number">
+  Maximum number of containers. Maximum value: 10.
+  
+  ```yaml
+  services:
+    - hostname: app
+      maxContainers: 6
+  ```
+</ParamField>
+
+## Service Mount Shared Storage
+
+### services[].mount
+
+<ParamField path="services[].mount" type="string[]">
+  List of shared storage services to mount. Requires `buildFromGit` to be set.
+  
+  ```yaml
+  services:
+    - hostname: app
+      buildFromGit: https://github.com/myorg/myapp
+      mount:
+        - storage1
+        - storage2
+  ```
+</ParamField>
+
+## Service Nginx Configuration
+
+### services[].nginxConfig
+
+<ParamField path="services[].nginxConfig" type="string">
+  Full nginx configuration for the service.
+  
+  ```yaml
+  services:
+    - hostname: app
+      nginxConfig: |-
+        server {
+            listen 80 default_server;
+            listen [::]:80 default_server;
+            server_name _;
+            root /var/www/public;
+            
+            location / {
+                try_files $uri $uri/ /index.php?$query_string;
+            }
+            
+            location ~ \.php$ {
+                fastcgi_pass unix:/var/run/php-fpm.sock;
+                fastcgi_index index.php;
+                include fastcgi_params;
+            }
+            
+            access_log syslog:server=unix:/dev/log,facility=local1;
+            error_log syslog:server=unix:/dev/log,facility=local1;
+        }
+  ```
+</ParamField>
+
+## Service zerops.yaml Configuration
+
+### services[].zeropsSetup
+
+<ParamField path="services[].zeropsSetup" type="string">
+  Specifies which service setup to use from the zerops.yaml configuration. This should match a setup name in either the `zeropsYaml` parameter or the `zerops.yaml` file in the repository.
+  
+  If not specified, defaults to the service hostname.
+  
+  ```yaml
+  services:
+    - hostname: app
+      zeropsSetup: backendapi
+  ```
+</ParamField>
+
+### services[].zeropsYaml
+
+<ParamField path="services[].zeropsYaml" type="object">
+  Full [zerops.yaml configuration](/zerops-yaml/specification) embedded in the import file. If provided, this takes precedence over any `zerops.yaml` file in the repository.
+  
+  ```yaml
+  services:
+    - hostname: app
+      buildFromGit: https://github.com/myorg/myapp
+      zeropsSetup: backendapi
+      zeropsYaml:
+        zerops:
+          - setup: backendapi
+            build:
+              base: nodejs@22
+              buildCommands:
+                - npm ci
+                - npm run build
+              deployFiles: ./dist
+              cache: node_modules
+            run:
+              start: node dist/index.js
+              ports:
+                - port: 3000
+                  httpSupport: true
+  ```
+</ParamField>
+
+### How zeropsSetup and zeropsYaml Work Together
+
+<AccordionGroup>
+  <Accordion title="Neither parameter specified">
+    - System looks for a `zerops.yaml` file in the repository root
+    - Searches for a setup with a name matching the service hostname
+  </Accordion>
+  
+  <Accordion title="Only zeropsSetup specified">
+    - System looks for the specified setup name in the repository's `zerops.yaml` file
+  </Accordion>
+  
+  <Accordion title="Only zeropsYaml specified">
+    - System uses the provided YAML configuration
+    - Searches for a setup with a name matching the service hostname
+  </Accordion>
+  
+  <Accordion title="Both parameters specified">
+    - System uses the provided `zeropsYaml` configuration
+    - Looks for the setup named in `zeropsSetup` within that YAML
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+If the specified `zeropsSetup` does not exist in the available YAML configuration, the import will fail.
+</Warning>
+
+## Complete Examples
+
+<CodeGroup>
+```yaml Full Project Import
+#yamlPreprocessor=on
+
+# Define the project
+project:
+  name: my-production-app
+  description: "Production environment"
+  corePackage: SERIOUS
+  tags:
+    - production
+    - api
+  envVariables:
+    LOG_LEVEL: info
+    REGION: us-east-1
+
+# Define services
+services:
+  # Node.js API Service
+  - hostname: api
+    type: nodejs@22
+    mode: HA
+    priority: 5
+    
+    envSecrets:
+      SECRET_KEY: <@generateRandomString(<32>)>
+      JWT_SECRET: <@generateRandomString(<64>)>
+    
+    objectStorageSize: 5
+    objectStoragePolicy: private
+    
+    buildFromGit: https://github.com/myorg/api
+    enableSubdomainAccess: false
+    
+    verticalAutoscaling:
+      minCpu: 2
+      maxCpu: 4
+      cpuMode: DEDICATED
+      minRam: 2
+      maxRam: 8
+      minDisk: 5
+      maxDisk: 20
+    
+    minContainers: 2
+    maxContainers: 6
+    
+    zeropsYaml:
+      zerops:
+        - setup: api
+          build:
+            base: nodejs@22
+            buildCommands:
+              - npm ci
+              - npm run build
+            deployFiles: ./dist
+            cache: node_modules
+          run:
+            start: node dist/index.js
+            ports:
+              - port: 3000
+                httpSupport: true
+  
+  # PostgreSQL Database
+  - hostname: db
+    type: postgresql@16
+    mode: HA
+    priority: 10
+    
+    verticalAutoscaling:
+      minCpu: 1
+      maxCpu: 2
+      cpuMode: SHARED
+      minRam: 1
+      maxRam: 4
+      minDisk: 5
+      maxDisk: 50
+  
+  # Shared Storage
+  - hostname: storage
+    type: shared-storage
+```
+
+```yaml Service Import Only
+#yamlPreprocessor=on
+
+services:
+  - hostname: worker
+    type: nodejs@22
+    mode: NON_HA
+    
+    envSecrets:
+      QUEUE_PASSWORD: <@generateRandomString(<32>)>
+    
+    buildFromGit: https://github.com/myorg/worker
+    
+    minContainers: 1
+    maxContainers: 3
+    
+    zeropsYaml:
+      zerops:
+        - setup: worker
+          build:
+            base: nodejs@22
+            buildCommands:
+              - npm ci
+            deployFiles: ./
+          run:
+            start: node worker.js
+```
+
+```yaml PHP Laravel Application
+#yamlPreprocessor=on
+
+project:
+  name: laravel-app
+  corePackage: LIGHT
+
+services:
+  - hostname: app
+    type: php-nginx@8.3
+    mode: HA
+    
+    dotEnvSecrets: |
+      APP_KEY=<@generateRandomString(<32>)>
+      DB_PASSWORD=<@generateRandomString(<32>)>
+    
+    buildFromGit: https://github.com/myorg/laravel-app
+    enableSubdomainAccess: true
+    
+    mount:
+      - storage
+    
+    nginxConfig: |-
+      server {
+          listen 80 default_server;
+          server_name _;
+          root /var/www/public;
+          
+          location / {
+              try_files $uri $uri/ /index.php?$query_string;
+          }
+          
+          location ~ \.php$ {
+              fastcgi_pass unix:/var/run/php-fpm.sock;
+              fastcgi_index index.php;
+              include fastcgi_params;
+          }
+      }
+    
+    zeropsYaml:
+      zerops:
+        - setup: app
+          build:
+            base: php@8.3
+            buildCommands:
+              - composer install --no-dev
+            deployFiles: ./
+          run:
+            initCommands:
+              - php artisan migrate --force
+  
+  - hostname: storage
+    type: shared-storage
+```
+</CodeGroup>
+
+## Export Projects and Services
+
+Zerops allows you to export existing projects and services as YAML configurations through the GUI.
+
+### Export a Single Service
+
+1. Navigate to your service dashboard
+2. Click the three-dot menu (⋮) in the top-right corner
+3. Select **Export service as yaml**
+
+### Export an Entire Project
+
+1. Go to the project dashboard
+2. Click the three-dot menu (⋮) in the top-right corner
+3. Select **Export project as yaml**
+
+### Using Exported Configurations
+
+Exported YAML files are compatible with:
+- Zerops GUI import functionality
+- `zcli project project-import` command
+- `zcli project service-import` command
+
+This makes it easy to:
+- Create backups of configurations
+- Replicate setups across environments
+- Share templates with team members
+- Version control your infrastructure
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="CLI Reference" icon="terminal" href="/references/cli">
+    Learn about zCLI commands for importing
+  </Card>
+  <Card title="zerops.yaml Specification" icon="file-code" href="/zerops-yaml/specification">
+    Full reference for build and runtime configuration
+  </Card>
+  <Card title="YAML Preprocessor" icon="wand-magic-sparkles" href="/references/import-yaml/pre-processor">
+    Generate secrets and random values
+  </Card>
+  <Card title="Service Types" icon="list" href="/references/import-yaml/type-list">
+    Available service types and versions
+  </Card>
+</CardGroup>
+
+*Need help? Join our [Discord community](https://discord.gg/zeropsio).*

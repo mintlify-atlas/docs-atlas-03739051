@@ -1,0 +1,100 @@
+---
+title: Node.js Runtime on Zerops
+description: Deploy and scale Node.js applications on Zerops with automatic scaling, build pipelines, and database integration.
+---
+
+Node.js is an asynchronous event-driven JavaScript runtime designed to build scalable network applications. Zerops provides a powerful, production-ready Node.js hosting environment with automatic scaling, built-in CI/CD, and seamless database connectivity.
+
+## Why Choose Node.js on Zerops
+
+Zerops makes deploying and managing Node.js applications effortless:
+
+- **Automatic Scaling** - Horizontal and vertical auto-scaling based on real-time resource usage
+- **Zero Configuration** - Deploy with a simple `zerops.yaml` file
+- **Built-in CI/CD** - Automatic builds from Git with customizable pipelines
+- **Database Integration** - Easy connections to PostgreSQL, MySQL, MongoDB, and more
+- **Multiple Versions** - Support for Node.js 18, 20, 22, and latest
+
+## Supported Node.js Versions
+
+Zerops supports the following Node.js versions:
+- `nodejs@18`
+- `nodejs@20`
+- `nodejs@22`
+- `nodejs@latest`
+
+You can upgrade between major versions at any time by updating your project configuration.
+
+## Quick Start
+
+Deploy a Node.js application in minutes:
+
+<Steps>
+  <Step title="Create a project">
+    Log in to the [Zerops GUI](https://app.zerops.io) and create a new project.
+  </Step>
+  
+  <Step title="Import the recipe">
+    Use our ready-made recipe to deploy a sample Node.js app with PostgreSQL:
+    
+    ```yaml
+    project:
+      name: my-nodejs-app
+    
+    services:
+      - hostname: app
+        type: nodejs@20
+        enableSubdomainAccess: true
+        buildFromGit: https://github.com/zeropsio/recipe-nodejs
+    
+      - hostname: db
+        type: postgresql@16
+        mode: NON_HA
+    ```
+  </Step>
+  
+  <Step title="Access your app">
+    Once deployed, access your application via the generated subdomain (e.g., `https://app-123-3000.prg1.zerops.app`).
+  </Step>
+</Steps>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Customizable Build Pipeline" icon="code" href="/runtimes/nodejs/build-pipeline">
+    Configure your build process with custom commands, environment variables, and caching.
+  </Card>
+  
+  <Card title="Auto Scaling" icon="chart-line" href="/runtimes/nodejs/scaling">
+    Automatic horizontal and vertical scaling to handle traffic spikes efficiently.
+  </Card>
+  
+  <Card title="Simple Deployment" icon="rocket" href="/runtimes/nodejs/deployment">
+    Deploy from Git with zero-downtime updates and readiness checks.
+  </Card>
+  
+  <Card title="Quick Setup" icon="bolt" href="/runtimes/nodejs/quickstart">
+    Get started in minutes with our quickstart guide.
+  </Card>
+</CardGroup>
+
+## What You'll Learn
+
+Explore our comprehensive guides:
+
+- **[Quickstart](/runtimes/nodejs/quickstart)** - Deploy your first Node.js app
+- **[Build Pipeline](/runtimes/nodejs/build-pipeline)** - Configure builds with `zerops.yaml`
+- **[Deployment](/runtimes/nodejs/deployment)** - Understand the deployment process
+- **[Scaling](/runtimes/nodejs/scaling)** - Configure auto-scaling for optimal performance
+
+## Example Recipe
+
+Check out our [Node.js recipe on GitHub](https://github.com/zeropsio/recipe-nodejs) for a complete working example with:
+- Express.js server
+- PostgreSQL database connection
+- Environment variable configuration
+- Production-ready `zerops.yaml`
+
+## Need Help?
+
+Join our [Discord community](https://discord.com/invite/WDvCZ54) to get help from our team and other Zerops users.

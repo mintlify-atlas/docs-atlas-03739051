@@ -1,0 +1,471 @@
+---
+title: Go Quickstart
+description: Deploy your first Go application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Go
+- Go installed locally (for development)
+
+## Deploy from Recipe
+
+The fastest way to get started is to deploy our ready-made Go example:
+
+<Steps>
+  <Step title="Import the Project">
+    Log in to [Zerops GUI](https://app.zerops.io) and click **Import a project**.
+  </Step>
+  
+  <Step title="Paste the Configuration">
+    Use this YAML configuration:
+    
+    ```yaml
+    project:
+      name: my-first-go-app
+    services:
+      - hostname: app
+        type: go@1.22
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-go-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Wait for Deployment">
+    Click **Import project** and wait for the build and deployment to complete.
+  </Step>
+  
+  <Step title="Access Your App">
+    Once deployed, find your subdomain URL in the **IP Addresses & Public Routing Overview**.
+    
+    Visit the URL to see "Hello, World!"
+  </Step>
+</Steps>
+
+## Deploy Your Own Go Application
+
+### Step 1: Create Your Application
+
+Create a simple HTTP server:
+
+```go title="main.go"
+package main
+
+import (
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+)
+
+func main() {
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprintf(w, "Hello from Go on Zerops!")
+    })
+    
+    http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(http.StatusOK)
+        fmt.Fprintf(w, "OK")
+    })
+    
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    
+    log.Printf("Server starting on port %s", port)
+    if err := http.ListenAndServe(":"+port, nil); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+Initialize Go modules:
+
+```bash
+go mod init myapp
+go mod tidy
+```
+
+### Step 2: Add zerops.yaml
+
+Create a `zerops.yaml` file in your repository root:
+
+```yaml
+zerops:
+  - setup: app
+    build:
+      base: go@1.22
+      buildCommands:
+        - go mod download
+        - go build -o app .
+      deployFiles:
+        - app
+      cache: ~/go/pkg/mod
+    
+    run:
+      start: ./app
+      ports:
+        - port: 8080
+          httpSupport: true
+      envVariables:
+        PORT: "8080"
+```
+
+### Step 3: Configure Your Service
+
+<Tabs>
+  <Tab title="Using zCLI">
+    Create a `description.yaml`:
+    
+    ```yaml
+    project:
+      name: my-go-app
+    services:
+      - hostname: app
+        type: go@1.22
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    Import the project:
+    
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+  
+  <Tab title="Using GUI">
+    1. Go to your project dashboard
+    2. Click **Add new service**
+    3. Select **Go** runtime
+    4. Choose version: **1.22**
+    5. Set hostname: `app`
+    6. Configure auto-scaling (optional)
+    7. Click **Create service**
+  </Tab>
+</Tabs>
+
+### Step 4: Deploy Your Code
+
+Deploy using zCLI:
+
+```bash
+zcli service deploy
+```
+
+## Framework Examples
+
+### Gin Framework
+
+Install Gin:
+
+```bash
+go get -u github.com/gin-gonic/gin
+```
+
+Create your app:
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/gin-gonic/gin"
+    "net/http"
+    "os"
+)
+
+func main() {
+    r := gin.Default()
+    
+    r.GET("/", func(c *gin.Context) {
+        c.JSON(http.StatusOK, gin.H{
+            "message": "Hello from Gin on Zerops!",
+        })
+    })
+    
+    r.GET("/health", func(c *gin.Context) {
+        c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+    })
+    
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    r.Run(":" + port)
+}
+```
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: api
+    build:
+      base: go@1.22
+      buildCommands:
+        - go mod download
+        - CGO_ENABLED=0 go build -ldflags="-s -w" -o app .
+      deployFiles:
+        - app
+    
+    run:
+      start: ./app
+      ports:
+        - port: 8080
+      envVariables:
+        GIN_MODE: release
+```
+
+### Echo Framework
+
+```bash
+go get github.com/labstack/echo/v4
+```
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware"
+    "net/http"
+)
+
+func main() {
+    e := echo.New()
+    
+    e.Use(middleware.Logger())
+    e.Use(middleware.Recover())
+    
+    e.GET("/", func(c echo.Context) error {
+        return c.JSON(http.StatusOK, map[string]string{
+            "message": "Hello from Echo on Zerops!",
+        })
+    })
+    
+    e.GET("/health", func(c echo.Context) error {
+        return c.JSON(http.StatusOK, map[string]string{
+            "status": "healthy",
+        })
+    })
+    
+    e.Start(":8080")
+}
+```
+
+### Fiber Framework
+
+```bash
+go get github.com/gofiber/fiber/v2
+```
+
+```go title="main.go"
+package main
+
+import (
+    "github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v2/middleware/logger"
+)
+
+func main() {
+    app := fiber.New()
+    
+    app.Use(logger.New())
+    
+    app.Get("/", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{
+            "message": "Hello from Fiber on Zerops!",
+        })
+    })
+    
+    app.Get("/health", func(c *fiber.Ctx) error {
+        return c.JSON(fiber.Map{"status": "healthy"})
+    })
+    
+    app.Listen(":8080")
+}
+```
+
+## Adding a Database
+
+Extend your project with PostgreSQL:
+
+```yaml title="description.yaml"
+project:
+  name: my-go-app
+services:
+  - hostname: app
+    type: go@1.22
+    minContainers: 1
+    maxContainers: 6
+  
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+Connect using GORM:
+
+```bash
+go get -u gorm.io/gorm
+go get -u gorm.io/driver/postgres
+```
+
+```go
+package main
+
+import (
+    "fmt"
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
+    "os"
+)
+
+func main() {
+    dsn := fmt.Sprintf(
+        "host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable",
+        "db",
+        os.Getenv("DB_USER"),
+        os.Getenv("DB_PASSWORD"),
+        os.Getenv("DB_NAME"),
+    )
+    
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        panic("failed to connect database")
+    }
+    
+    // Your database operations here
+}
+```
+
+## Environment Variables
+
+Set environment variables in `zerops.yaml`:
+
+```yaml
+run:
+  envVariables:
+    APP_ENV: production
+    LOG_LEVEL: info
+    PORT: "8080"
+```
+
+Access in your code:
+
+```go
+import "os"
+
+func main() {
+    env := os.Getenv("APP_ENV")
+    logLevel := os.Getenv("LOG_LEVEL")
+}
+```
+
+## Build Optimizations
+
+### Create Smaller Binaries
+
+Use build flags to reduce binary size:
+
+```yaml
+build:
+  buildCommands:
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o app .
+```
+
+### Cache Go Modules
+
+Speed up builds by caching dependencies:
+
+```yaml
+build:
+  cache: ~/go/pkg/mod
+```
+
+### Multi-Stage Builds
+
+For complex applications with multiple binaries:
+
+```yaml
+build:
+  buildCommands:
+    - go mod download
+    - go build -o api cmd/api/main.go
+    - go build -o worker cmd/worker/main.go
+  deployFiles:
+    - api
+    - worker
+    - config
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with module errors">
+    Ensure `go.mod` and `go.sum` are committed:
+    
+    ```bash
+    go mod tidy
+    git add go.mod go.sum
+    git commit -m "Update dependencies"
+    ```
+  </Accordion>
+  
+  <Accordion title="Application doesn't start">
+    Check that your start command and port configuration match:
+    
+    ```yaml
+    run:
+      start: ./app
+      ports:
+        - port: 8080
+    ```
+  </Accordion>
+  
+  <Accordion title="Binary not found">
+    Make sure you're deploying the compiled binary:
+    
+    ```yaml
+    build:
+      buildCommands:
+        - go build -o app .  # Creates 'app' binary
+      deployFiles:
+        - app  # Deploys the 'app' binary
+    ```
+  </Accordion>
+  
+  <Accordion title="CGO errors">
+    For CGO dependencies, install build tools:
+    
+    ```yaml
+    build:
+      os: ubuntu
+      prepareCommands:
+        - sudo apt-get update
+        - sudo apt-get install -y gcc g++ make
+      buildCommands:
+        - CGO_ENABLED=1 go build -o app .
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/go/overview">
+    Learn about Go runtime features
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/references/environment-variables">
+    Manage secrets and configuration
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+  <Card title="Monitoring" icon="chart-bar" href="/features/monitoring">
+    Monitor your application
+  </Card>
+</CardGroup>

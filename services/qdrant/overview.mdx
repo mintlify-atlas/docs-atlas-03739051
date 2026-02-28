@@ -1,0 +1,177 @@
+---
+title: Qdrant
+description: Production-ready Qdrant vector database with managed infrastructure, automatic cluster configuration, and built-in high availability.
+---
+
+[Qdrant](https://qdrant.tech/) in Zerops provides a fully managed vector database solution designed for AI applications. Focus on building vector search features while we handle infrastructure maintenance, high availability, and data protection.
+
+## Supported Versions
+
+Zerops currently supports Qdrant version **1.12**.
+
+When importing a service, use version format:
+- `qdrant@1.12`
+
+## Deployment Modes
+
+### Non-HA Mode
+
+- Single node setup ideal for development and non-production projects
+- Simple deployment and management
+
+### HA Cluster
+
+- Automatically configured with 3 nodes
+- Recommended for production environments
+- Built-in data replication across nodes
+- By default (`automaticClusterReplication=true`), automatically creates replicas of all shards across all three nodes
+  - Can be disabled by setting `automaticClusterReplication` to `false`
+- Automatic cluster recovery and node replacement in case of failures
+
+## Network Architecture & Access
+
+Qdrant can be accessed only from services within the same project. Public access is not available.
+
+### API Keys
+
+API key authentication is required for both HTTP and gRPC API calls. Include the key in your request headers. The keys are automatically generated when the Qdrant service is created and can be found in the service's environment variables:
+
+- **`apiKey`:** Full access API key for administrative operations (creating collections, indexing)
+- **`readOnlyApiKey`:** Restricted API key for search operations
+
+### HTTP API
+
+- **Port:** `6333`
+- **Connection String:** Available as `connectionString` environment variable or construct using `http://${hostname}:${port}`
+
+### gRPC API
+
+- **Port:** `6334`
+- **gRPC Connection String:** Available as `grpcConnectionString` environment variable or construct using `tcp://${hostname}:${grpcPort}`
+
+## Connection Examples
+
+### Python Client
+
+```python
+from qdrant_client import QdrantClient
+import os
+
+client = QdrantClient(
+    url=os.environ['connectionString'],
+    api_key=os.environ['apiKey']
+)
+
+# Create a collection
+client.create_collection(
+    collection_name="my_collection",
+    vectors_config={
+        "size": 384,
+        "distance": "Cosine"
+    }
+)
+
+# Insert vectors
+client.upsert(
+    collection_name="my_collection",
+    points=[
+        {
+            "id": 1,
+            "vector": [0.1] * 384,
+            "payload": {"name": "example"}
+        }
+    ]
+)
+```
+
+### JavaScript Client
+
+```javascript
+import { QdrantClient } from '@qdrant/js-client-rest';
+
+const client = new QdrantClient({
+  url: process.env.connectionString,
+  apiKey: process.env.apiKey
+});
+
+// Create a collection
+await client.createCollection('my_collection', {
+  vectors: {
+    size: 384,
+    distance: 'Cosine'
+  }
+});
+
+// Search
+const searchResult = await client.search('my_collection', {
+  vector: [0.1, 0.2, 0.3, ...],
+  limit: 5
+});
+```
+
+## Data Backup
+
+Qdrant backups are created using native snapshotting:
+
+- **Format**: `.snapshot` (compressed)
+- **Tooling**: Native snapshotting
+- **Source**: Taken from the primary node (leader in HA clusters)
+
+For backup configuration, scheduling, retention policies, and management options, see the [Zerops Backups](/features/backup) documentation.
+
+### Restoring Backups
+
+To restore a Qdrant backup:
+
+1. **Download** the backup file (`.snapshot`) from the Zerops UI
+2. **Prepare** your target environment (clean existing collections or use a new instance)
+3. **Restore** using the Qdrant API. Use the snapshot restore endpoint to import the snapshot file. Follow the [official Qdrant documentation](https://qdrant.tech/documentation/database-tutorials/create-snapshot/#restore-from-snapshot) for detailed snapshot restore procedures.
+
+For assistance with the restoration process, contact Zerops support.
+
+## Use Cases
+
+Qdrant excels in:
+
+- **Semantic Search** - Find similar documents based on meaning, not just keywords
+- **Recommendation Systems** - Suggest products, content, or services based on similarity
+- **Image Search** - Search images by visual similarity
+- **Anomaly Detection** - Identify outliers in high-dimensional data
+- **RAG Applications** - Retrieval-Augmented Generation for LLM applications
+- **Chatbots** - Context-aware conversational AI
+
+## Best Practices
+
+### Collection Design
+
+- Choose appropriate vector dimensions based on your embedding model
+- Select the right distance metric (Cosine, Euclidean, Dot product)
+- Use payload indexing for faster filtering
+- Plan collection partitioning for large datasets
+
+### Performance
+
+- Use batch operations for bulk insertions
+- Implement appropriate filtering to reduce search space
+- Monitor collection size and shard distribution
+- Use gRPC for high-throughput scenarios
+
+### Security
+
+- Use `readOnlyApiKey` for search-only operations
+- Keep `apiKey` secure in backend services
+- Store credentials in environment variables
+- Implement proper access controls in your application
+
+### High Availability
+
+- Use HA mode for production workloads
+- Monitor cluster health and replication status
+- Implement retry logic for transient failures
+- Test failover scenarios before production deployment
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)

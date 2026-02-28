@@ -1,0 +1,111 @@
+---
+title: Access & Networking
+description: Connect to your services internally and make them publicly accessible from the internet.
+---
+
+Zerops provides multiple ways to access your services, whether you need internal communication between services, secure access from your development machine, or public access from the internet.
+
+<Note>
+By default, your services are not publicly accessible until you configure external access. Internal communication between services within the same project works automatically.
+</Note>
+
+## How Zerops Networking Works
+
+Every Zerops project includes a **shared networking infrastructure** that handles all access methods:
+
+**Private Project Network:**
+- All services within a project share a dedicated private network
+- Services communicate directly using hostnames and internal ports
+- Traffic stays isolated within your project
+
+**Public Access Infrastructure:**
+- **Core (L3) Balancer** manages IP addresses and direct port access
+- **L7 HTTP Balancer** handles domain routing and SSL termination
+  - Can be extensively configured for advanced routing, performance optimization, and custom behaviors
+  - See the [L7 Balancer Configuration Guide](/references/networking/l7-balancer-config) for detailed options
+- Both are shared across all services in your project
+
+**Secure External Access:**
+- **Built-in VPN** provides secure tunnel access to your project's private network
+- Useful for development, debugging, and administration
+
+## Internal Access
+
+<Tip>
+See the complete [Internal access reference guide](/references/networking/internal-access) for detailed setup instructions.
+</Tip>
+
+Services within the same project can communicate directly using hostnames and internal ports. No additional configuration required.
+
+**Example:** Connect to your `api` service on port 3000:
+```
+http://api:3000
+```
+
+**Key points:**
+- Use service hostname as the address
+- Use HTTP (not HTTPS) for internal communication
+- Access internal ports defined in your service configuration
+- Communication is automatically isolated from other projects
+
+### Environment Variables
+
+Zerops automatically creates environment variables to help with internal connections between services.
+
+## VPN Access
+
+<Tip>
+See the complete [VPN reference guide](/references/networking/vpn) for detailed setup and troubleshooting.
+</Tip>
+
+Connect securely to your project's internal network from your local machine:
+
+```bash
+# Connect to your project
+zcli vpn up <project-id>
+
+# Access services using internal hostnames
+curl http://api:3000/health
+
+# Disconnect when done
+zcli vpn down
+```
+
+## Public Access
+
+<Tip>
+See the complete [Public access reference guide](/references/networking/public-access) for detailed configuration instructions.
+</Tip>
+
+Make your services accessible from the internet using one of three methods:
+
+### Zerops Subdomain
+**Best for:** Development and testing
+
+- Quick setup with automatic `.zerops.app` subdomains
+- Each service gets its own unique subdomain
+- Automatic SSL certificate management
+- Shared infrastructure (has limitations for production use)
+
+### Custom Domain
+**Best for:** Production deployments
+
+- Use your own domain names
+- Better performance with dedicated balancer
+- Full control over SSL and routing
+- Requires DNS configuration
+
+### Direct Port Access
+**Best for:** Non-HTTP protocols and specialized use cases
+
+- Direct access to specific ports on your services
+- Supports any protocol (TCP/UDP)
+- Optional firewall configuration
+- Uses your project's IP addresses
+
+## Next Steps
+
+- **Internal access setup:** [Internal Access Reference Guide](/references/networking/internal-access)
+- **Public access configuration:** [Public Access Reference Guide](/references/networking/public-access)
+- **VPN setup and troubleshooting:** [VPN Reference Guide](/references/networking/vpn)
+- **Advanced routing and SSL:** [L7 Balancer Configuration Guide](/references/networking/l7-balancer-config)

@@ -1,0 +1,224 @@
+---
+title: Backup & Restore PostgreSQL
+description: Learn how to work with backups in PostgreSQL service in Zerops.
+---
+
+Zerops provides automated data backup for PostgreSQL services with full encryption and flexible management options.
+
+For general backup information including configuration, scheduling, and management options, see the [Zerops Backups](/features/backup) documentation, which covers:
+- Backup scheduling and retention policies
+- Tagging system and storage quotas
+- Manual backup creation and CLI tools
+- Security and encryption details
+
+This page focuses on PostgreSQL-specific backup details.
+
+## PostgreSQL Backup Format
+
+PostgreSQL backups are created using `pg_dump` and stored in `.zip` format:
+
+- **Format**: `.zip` (containing per-schema `.dump` files)
+- **Tooling**: `pg_dump`
+- **Compression**: Custom format (`-Fc`), schema files named `schemaName.dump`
+- **Storage**: Encrypted and stored in isolated object storage
+
+## Backup Configuration
+
+You can configure backup settings in the Zerops GUI:
+
+<Steps>
+  <Step title="Navigate to Backup settings">
+    Go to your PostgreSQL service and select **Backups List & Configuration**.
+  </Step>
+  
+  <Step title="Configure schedule">
+    Set up automated backup schedule:
+    - Choose backup frequency (hourly, daily, weekly)
+    - Set retention period
+    - Configure backup window
+  </Step>
+  
+  <Step title="Add tags (optional)">
+    Create tags to organize and protect important backups:
+    - Protected tags prevent automatic deletion
+    - Use descriptive names like `pre-migration-v2`
+  </Step>
+</Steps>
+
+## Creating Manual Backups
+
+You can create manual backups at any time:
+
+### Using Zerops GUI
+
+<Steps>
+  <Step title="Navigate to Backups">
+    Go to your PostgreSQL service and select **Backups List & Configuration**.
+  </Step>
+  
+  <Step title="Create backup">
+    Click **Create backup now** button.
+  </Step>
+  
+  <Step title="Add tag (optional)">
+    Optionally add a tag to identify this backup (e.g., `before-schema-change`).
+  </Step>
+</Steps>
+
+### Using zCLI
+
+```bash
+# Create a backup with a tag
+zcli service backup create --service-id <service-id> --tag "pre-migration"
+
+# List all backups
+zcli service backup list --service-id <service-id>
+```
+
+## Restoring PostgreSQL Backups
+
+To restore a PostgreSQL backup:
+
+<Steps>
+  <Step title="Download the backup file">
+    Download the backup file (`.zip`) from the Zerops UI:
+    1. Navigate to your PostgreSQL service
+    2. Go to **Backups List & Configuration**
+    3. Find the backup you want to restore
+    4. Click the **three dots menu** (⋮)
+    5. Select **Download**
+  </Step>
+  
+  <Step title="Extract the backup">
+    Extract the zip file to access the individual schema dump files:
+    ```bash
+    unzip backup.zip
+    ```
+  </Step>
+  
+  <Step title="Prepare target environment">
+    Choose one of the following:
+    - Clean existing data in your database
+    - Create a new PostgreSQL service for the restore
+  </Step>
+  
+  <Step title="Restore using pg_restore">
+    Use PostgreSQL native tools to restore the data:
+    
+    ```bash
+    # Restore a single schema
+    pg_restore -h hostname -U username -d database_name schemaName.dump
+    
+    # Restore with verbose output
+    pg_restore -v -h hostname -U username -d database_name schemaName.dump
+    
+    # Restore and clean existing data first
+    pg_restore -c -h hostname -U username -d database_name schemaName.dump
+    ```
+    
+    <Tip>
+    Use the `-c` flag to drop database objects before recreating them. Use `-v` for verbose output to monitor progress.
+    </Tip>
+  </Step>
+</Steps>
+
+### Alternative: Using Management Tools
+
+You can also restore backups using web-based management tools like phpMyAdmin or AdminerEvo as described in [PostgreSQL Management](/services/postgresql/manage).
+
+### Restore Examples
+
+<CodeGroup>
+```bash Via VPN
+# Connect via Zerops VPN first
+zcli vpn start
+
+# Restore to the database
+pg_restore -h database1 -U database1 -d db -v schemaName.dump
+
+# Stop VPN when done
+zcli vpn stop
+```
+
+```bash Via Direct Connection
+# Restore using public IP (requires Direct IP Access)
+pg_restore -h [public-ip] -p 6432 -U database1 -d db -v schemaName.dump
+```
+</CodeGroup>
+
+<Warning>
+If you have dependencies between schemas, make sure to restore them in the correct order.
+</Warning>
+
+## High Availability
+
+For PostgreSQL services running in High Availability mode:
+- Backups are created on a randomly selected healthy node
+- Other nodes remain operational during the backup process
+- Manual backups typically run on the primary node
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Before Major Changes" icon="shield-check">
+    Always create a manual backup with a protected tag before database migrations or major schema changes.
+  </Card>
+  
+  <Card title="Test Restores" icon="flask">
+    Test your restore process periodically in a non-production environment.
+  </Card>
+  
+  <Card title="Monitor Storage" icon="chart-line">
+    Monitor your backup storage usage in the Project Overview.
+  </Card>
+  
+  <Card title="Use Descriptive Tags" icon="tag">
+    Use descriptive tags like `pre-migration-v2` for important snapshots.
+  </Card>
+</CardGroup>
+
+### Additional Best Practices
+
+- **Consider schema order** - If you have dependencies between schemas, restore them in the correct order
+- **Protect critical backups** - Use protected tags to prevent automatic deletion of important backups
+- **Schedule wisely** - Configure backup schedules during low-traffic periods to minimize impact
+- **Document your process** - Keep notes on your backup and restore procedures
+- **Verify backups** - Periodically verify that backups are being created successfully
+
+## Troubleshooting
+
+### Backup fails with "out of disk space"
+
+- Increase the `maxDisk` setting in your PostgreSQL service scaling configuration
+- Clean up old backups to free storage quota
+- Check backup retention policies
+
+### Restore is very slow
+
+- The restore process speed depends on:
+  - Database size
+  - Available RAM and CPU resources
+  - Network connection (for remote restores)
+- Consider temporarily scaling up your PostgreSQL service during restore
+
+### Restore fails with permission errors
+
+- Ensure you're using a user with sufficient privileges
+- For full restores, use the superuser credentials (`postgres` user)
+- Check that the target database exists and is accessible
+
+## Next Steps
+
+For assistance with the restoration process or backup configuration, contact [Zerops support](https://discord.com/invite/WDvCZ54).
+
+For additional best practices and troubleshooting, refer to the [main backup documentation](/features/backup).
+
+<CardGroup cols={2}>
+  <Card title="Manage Users & Databases" icon="database" href="/services/postgresql/manage">
+    Create and manage users, databases, and plugins
+  </Card>
+  
+  <Card title="Connect to PostgreSQL" icon="link" href="/services/postgresql/connect">
+    Learn connection methods for internal and remote access
+  </Card>
+</CardGroup>

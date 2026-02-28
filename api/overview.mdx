@@ -1,0 +1,48 @@
+---
+title: API Overview
+description: Get started with the Zerops REST API to programmatically manage your projects, services, and infrastructure
+---
+
+The Zerops REST API allows you to programmatically interact with the Zerops platform by providing access to resources like projects, services, users, billing, and configurations.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.app-prg1.zerops.io/api/rest/public
+```
+
+## Getting Started
+
+To get started with the Zerops API:
+
+1. **Obtain a Personal Access Token** from the [Access Token management](https://app.zerops.io/settings/token-management) section in the Zerops GUI
+2. **Include the token** in your API requests using Bearer authentication
+3. **Explore the available endpoints** using our [Swagger documentation](https://api.app-prg1.zerops.io/api/rest/public/swagger)
+
+## Rate Limiting
+
+The API implements rate limiting to ensure fair usage and platform stability. If you exceed the rate limit, you'll receive a `429 Too Many Requests` response.
+
+## Response Format
+
+All API responses are returned in JSON format. Successful responses will include the requested data, while error responses will contain an error message and appropriate HTTP status code.
+
+## Support
+
+For API support and questions:
+- View the [full Swagger documentation](https://api.app-prg1.zerops.io/api/rest/public/swagger)
+- Contact Zerops support through the dashboard
+- Check the [CLI documentation](/cli/overview) for command-line alternatives
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn how to authenticate your API requests
+  </Card>
+  <Card title="API Endpoints" icon="code" href="/api/endpoints">
+    Explore available API endpoints and resources
+  </Card>
+</CardGroup>

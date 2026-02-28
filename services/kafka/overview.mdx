@@ -1,0 +1,185 @@
+---
+title: Apache Kafka
+description: Production-ready Apache Kafka messaging platform with automated scaling and enterprise reliability. Deploy and manage with zero infrastructure overhead.
+---
+
+Zerops provides a fully managed [Apache Kafka](https://kafka.apache.org/) messaging platform with automated scaling and zero infrastructure overhead, letting developers focus entirely on development.
+
+## Supported Versions
+
+Zerops currently supports Kafka version **3.9**.
+
+When importing a service, use version format:
+- `kafka@3.9`
+
+## Service Configuration
+
+Our Kafka implementation features optimized default settings designed for common use cases.
+
+### Key Configuration
+
+- **Client Connections:** Data brokers available on port `9092`
+- **Authentication:** Secure SASL PLAIN with automatically generated credentials
+- **Data Persistence:** Topic data stored indefinitely (no time or size limit)
+- **Performance:** Optimized settings for reliability and throughput
+
+### Resource Allocation
+
+Zerops automatically allocates resources to your Kafka service based on demand:
+
+- **Memory:** Up to 40GB RAM for high-performance message processing
+- **Storage:** Up to 250GB for persistent storage of messages and logs
+- **Auto-scaling:** Resources scale up and down automatically based on workload
+
+## Deployment Modes
+
+<Warning>
+Deployment mode is selected during service creation and cannot be changed later.
+</Warning>
+
+### High-Availability (HA) Setup
+
+The recommended solution for production workloads and mission-critical data:
+
+- Creates a multi-node Kafka cluster with **3 broker nodes**
+- Configures **6 partitions** across the cluster
+- Implements **replication factor of 3** (each broker node has a copy of each partition)
+- Default topic replication is also 3 (overridable by user application)
+- Zerops automatically attempts to repair the cluster and data replication in case of a node failure
+
+### Single Node Instance
+
+Suitable for development and testing environments:
+
+- Consists of **1 broker node**
+- Configures **3 partitions**
+- No data replication
+- Lower resource requirements
+
+<Note>
+Use for development or non-critical data only, as data loss may occur due to container volatility.
+</Note>
+
+## Authentication Management
+
+Authentication credentials are automatically generated and managed by the platform using SASL PLAIN authentication.
+
+**Access your credentials through:**
+
+- The service access details in the Zerops GUI
+- Environment variables in your service configuration:
+  - `user` - Username for authentication
+  - `password` - Generated secure password
+  - `port` - Kafka port (value: `9092`)
+
+## Client Access
+
+Client implementations differ. Please refer to your chosen client's configuration manual for specific details.
+
+### Seed Broker Connection
+
+Connect to the Kafka cluster using the "seed" (or "bootstrap") broker server:
+
+```
+<hostname>:9092
+```
+
+### Specific Broker Access
+
+To access a single specific broker or a list of all/some brokers:
+
+```
+node-stable-1.db.<hostname>.zerops:9092,node-stable-2.db.<hostname>.zerops:9092,...
+```
+
+## Connection Examples
+
+### Node.js (KafkaJS)
+
+```javascript
+import { Kafka } from 'kafkajs';
+
+const kafka = new Kafka({
+  clientId: 'my-app',
+  brokers: [`${process.env.hostname}:9092`],
+  sasl: {
+    mechanism: 'plain',
+    username: process.env.user,
+    password: process.env.password
+  }
+});
+
+const producer = kafka.producer();
+await producer.connect();
+
+await producer.send({
+  topic: 'test-topic',
+  messages: [
+    { value: 'Hello Kafka!' }
+  ]
+});
+```
+
+### Python (kafka-python)
+
+```python
+from kafka import KafkaProducer
+import os
+
+producer = KafkaProducer(
+    bootstrap_servers=[f"{os.environ['hostname']}:9092"],
+    security_protocol='SASL_PLAINTEXT',
+    sasl_mechanism='PLAIN',
+    sasl_plain_username=os.environ['user'],
+    sasl_plain_password=os.environ['password']
+)
+
+producer.send('test-topic', b'Hello Kafka!')
+producer.flush()
+```
+
+## Use Cases
+
+Kafka excels in:
+
+- **Event Streaming** - Real-time data pipelines and event-driven architectures
+- **Message Queuing** - Decouple services with reliable message delivery
+- **Log Aggregation** - Centralize logs from multiple services
+- **Stream Processing** - Process data in real-time with Kafka Streams
+- **Metrics Collection** - Aggregate and analyze application metrics
+- **Microservices Communication** - Reliable inter-service messaging
+
+## Best Practices
+
+### Production Workloads
+
+- Use HA mode for all production deployments
+- Configure proper retention policies for your topics based on your data requirements
+- Monitor consumer lag to ensure messages are being processed efficiently
+- Use consumer groups to distribute processing load
+
+### Development Environments
+
+- Single node instances are suitable for development and testing
+- Be aware of potential data loss in non-HA deployments
+- Consider using smaller message sizes during development to reduce resource usage
+
+### Performance
+
+- Batch messages when possible to improve throughput
+- Use appropriate partition counts for your workload
+- Monitor broker metrics and consumer lag
+- Implement proper error handling and retry logic
+
+### Data Management
+
+- Set appropriate retention policies per topic
+- Monitor disk usage and plan for growth
+- Use compacted topics for state management
+- Implement proper key distribution for balanced partitions
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)

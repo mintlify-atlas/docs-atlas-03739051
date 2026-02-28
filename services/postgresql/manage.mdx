@@ -1,0 +1,262 @@
+---
+title: Manage PostgreSQL Users, Databases and Plugins
+description: Learn how to manage PostgreSQL users, databases, plugins, and use database administration tools in Zerops.
+---
+
+This guide covers how to manage your PostgreSQL databases in Zerops, including default setup, database management tools, plugins, and best practices.
+
+## Default Database and User
+
+Zerops creates a default database and user automatically when a new PostgreSQL service is [created](/services/postgresql/create).
+
+### Database
+
+- **Name**: Identical to the service hostname
+- **Encoding**: `utf8mb4`
+
+### DB User
+
+- **Username**: Identical to the service hostname
+- **Password**: Generated randomly
+
+<Info>
+For connection methods and environment variables, see the [Connect to PostgreSQL](/services/postgresql/connect) page.
+</Info>
+
+<Warning>
+**Important notes:**
+- When changing passwords, update both the database user password and the environment variable separately - they don't automatically synchronize.
+- While both `postgresql://` and `postgres://` URI formats are valid, Zerops uses the `postgresql://` format. If your software requires `postgres://`, create a custom environment variable with this format.
+- Do not use SSL/TLS protocols for internal connections. Security is assured by the project's private network.
+</Warning>
+
+## Database Management Tools
+
+You can use any PostgreSQL management tool of your choice to administer your databases in Zerops. For convenience, Zerops provides ready-to-use recipes for two popular web-based database management tools:
+
+- **[AdminerEvo](https://github.com/adminerevo/adminerevo)** - developed by the AdminerEvo community and is a continuation of the [Adminer](https://www.adminer.org) project by Jakub Vrána
+- **[phpMyAdmin](https://www.phpmyadmin.net)** - a popular free database administration tool that works with both MySQL and PostgreSQL databases
+
+### Installing Management Tools
+
+You can install these tools with a simple one-click import in Zerops:
+
+<Steps>
+  <Step title="Open Import Services">
+    In Zerops GUI, open your project and select **Import services** from the left menu.
+  </Step>
+  
+  <Step title="Paste YAML configuration">
+    Copy and paste one of the following YAML configurations.
+  </Step>
+  
+  <Step title="Start the import">
+    Click the import button to deploy the management tool.
+  </Step>
+</Steps>
+
+<CodeGroup>
+```yaml AdminerEvo
+services:
+  - hostname: adminerevo
+    type: php-apache@8.3
+    enableSubdomainAccess: true
+    buildFromGit: https://github.com/zeropsio/recipe-adminerevo
+```
+
+```yaml phpMyAdmin
+services:
+  - hostname: phpmyadmin
+    type: php-apache@8.1+2.4
+    minContainers: 1
+    maxContainers: 1
+    documentRoot: public
+    buildFromGit: https://github.com/zeropsio/recipe-phpmyadmin@main
+```
+</CodeGroup>
+
+### Accessing Management Tools
+
+After installation, you can access these tools via VPN:
+
+<Steps>
+  <Step title="Start the Zerops VPN">
+    [Start the VPN connection](/references/networking/vpn) to your project.
+  </Step>
+  
+  <Step title="Open in browser">
+    Type `http://adminerevo` or `http://phpmyadmin` in your browser.
+  </Step>
+</Steps>
+
+<Tip>
+Try `http://adminerevo.zerops` or `http://phpmyadmin.zerops` if you encounter any connection issues.
+</Tip>
+
+<Warning>
+Do not use https when connecting to management tools via VPN.
+</Warning>
+
+## Database Tools on Your Workstation
+
+You can use various database management tools from your local workstation to connect to your PostgreSQL database in Zerops:
+
+<Steps>
+  <Step title="Establish a secure tunnel">
+    Use the [Zerops VPN](/references/networking/vpn) to create an encrypted connection to your Zerops project.
+  </Step>
+  
+  <Step title="Obtain connection details">
+    Get the [connection details](/services/postgresql/connect#connection-details) from Zerops GUI.
+    
+    <Info>Environment variables are not available through VPN connections</Info>
+  </Step>
+  
+  <Step title="Connect with your preferred tool">
+    Choose your database tool and connect:
+    
+    **Desktop Database Tools** - popular GUI tools like:
+    - pgAdmin
+    - DBeaver
+    - DataGrip
+    - Any other PostgreSQL-compatible client
+    
+    **Command Line with psql** - connect using the standard PostgreSQL command-line client:
+    ```bash
+    psql -h [hostname] -U [user] -d [database_name]
+    ```
+    
+    <Warning>Do not use SSL/TLS (security is provided by the VPN)</Warning>
+  </Step>
+</Steps>
+
+<Tip>
+Try `{hostname}.zerops` instead of just `{hostname}` if you encounter any connection issues.
+</Tip>
+
+## How to install and manage PostgreSQL plugins
+
+### Viewing available plugins
+
+You can list all available PostgreSQL plugins by running the following query (superuser privileges not required):
+
+```sql
+SELECT * FROM pg_available_extensions ORDER BY name;
+```
+
+### Installing plugins (requires superuser)
+
+<Steps>
+  <Step title="Connect with superuser credentials">
+    Use the `superUser` (user `postgres`) and `superUserPassword` environment variables from your PostgreSQL service.
+  </Step>
+  
+  <Step title="Switch to your service database">
+    When logging in as the superuser, you're initially in the `postgres` database, not your service database.
+  </Step>
+  
+  <Step title="Install required extensions">
+    ```sql
+    CREATE EXTENSION pg_stat_statements;
+    CREATE EXTENSION vector;
+    CREATE EXTENSION postgis;
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Currently, it is not possible to add new plugins that are not already listed in `pg_available_extensions`.
+</Warning>
+
+## Text Search Dictionaries
+
+When working with text search functionality, you'll need to reference the correct `stop`, `dict`, and `affix` files when creating dictionaries in your database. These files are essential for proper text search configuration.
+
+Zerops PostgreSQL includes the following dictionary files:
+
+<Accordion title="Available dictionary files">
+**Stop word files** - used to remove common words that don't add significant meaning:
+```
+czech.stop
+danish.stop
+dutch.stop
+english.stop
+finnish.stop
+french.stop
+german.stop
+hungarian.stop
+italian.stop
+nepali.stop
+norwegian.stop
+polish.stop
+portuguese.stop
+russian.stop
+slovak.stop
+spanish.stop
+swedish.stop
+turkish.stop
+```
+
+**Dictionary and affix files** - used for stemming and word normalization:
+```
+cs_CZ.affix
+cs_CZ.dict
+en_US.affix
+en_US.dict
+pl_PL.affix
+pl_PL.dict
+sk_SK.affix
+sk_SK.dict
+```
+
+**Special rules file:**
+```
+unaccent.rules
+```
+</Accordion>
+
+For more information on text search dictionaries, refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/16/textsearch-dictionaries.html).
+
+## Creating Additional Users and Databases
+
+You can create additional PostgreSQL users and databases using any of the management tools mentioned above:
+
+### Using psql
+
+```sql
+-- Create a new database
+CREATE DATABASE myapp;
+
+-- Create a new user with password
+CREATE USER myappuser WITH PASSWORD 'secure_password';
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE myapp TO myappuser;
+```
+
+### Using AdminerEvo or phpMyAdmin
+
+1. Connect to the management tool via VPN
+2. Use the GUI to create new databases and users
+3. Set appropriate privileges for the new users
+
+## Best Practices
+
+- **Use environment variables** for database connections instead of hardcoding credentials
+- **Create separate users** for different applications or services
+- **Grant minimal privileges** - only give users the permissions they need
+- **Regularly update passwords** and synchronize them with environment variables
+- **Use read replicas** (port 5433) in HA mode to distribute read load
+- **Install only necessary plugins** to minimize resource usage
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Connect to PostgreSQL" icon="link" href="/services/postgresql/connect">
+    Learn connection methods for internal and remote access
+  </Card>
+  
+  <Card title="Backup & Restore" icon="clock-rotate-left" href="/services/postgresql/backup">
+    Configure backups and restore your data
+  </Card>
+</CardGroup>

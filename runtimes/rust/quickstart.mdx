@@ -1,0 +1,428 @@
+---
+title: Rust Quickstart
+description: Deploy your first Rust application on Zerops in under 5 minutes.
+---
+
+## Prerequisites
+
+- A [Zerops account](https://app.zerops.io)
+- Basic knowledge of Rust
+- Rust installed locally (for development)
+
+## Deploy from Recipe
+
+The fastest way to get started:
+
+<Steps>
+  <Step title="Import the Project">
+    Log in to [Zerops GUI](https://app.zerops.io) and click **Import a project**.
+  </Step>
+  
+  <Step title="Paste the Configuration">
+    ```yaml
+    project:
+      name: my-first-rust-app
+    services:
+      - hostname: app
+        type: rust@latest
+        minContainers: 1
+        maxContainers: 3
+        buildFromGit: https://github.com/zeropsio/recipe-rust-hello-world@main
+        enableSubdomainAccess: true
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    Click **Import project** and wait for compilation and deployment.
+  </Step>
+  
+  <Step title="Access Your App">
+    Visit your subdomain URL to see "Hello, World!"
+  </Step>
+</Steps>
+
+## Deploy Your Own Rust Application
+
+### Step 1: Create Your Application
+
+Create a new Rust project:
+
+```bash
+cargo new myapp
+cd myapp
+```
+
+Add dependencies to `Cargo.toml`:
+
+```toml title="Cargo.toml"
+[package]
+name = "myapp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+strip = true
+```
+
+Create a simple web server:
+
+```rust title="src/main.rs"
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use std::env;
+
+async fn index() -> impl Responder {
+    HttpResponse::Ok().body("Hello from Rust on Zerops!")
+}
+
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "healthy"
+    }))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let bind_address = format!("0.0.0.0:{}", port);
+    
+    println!("Server starting on {}", bind_address);
+    
+    HttpServer::new(|| {
+        App::new()
+            .route("/", web::get().to(index))
+            .route("/health", web::get().to(health))
+    })
+    .bind(&bind_address)?
+    .run()
+    .await
+}
+```
+
+### Step 2: Add zerops.yaml
+
+```yaml title="zerops.yaml"
+zerops:
+  - setup: app
+    build:
+      base: rust@latest
+      buildCommands:
+        - cargo build --release
+      deployFiles:
+        - target/release/myapp
+      cache:
+        - target
+        - ~/.cargo/registry
+    
+    run:
+      start: ./target/release/myapp
+      ports:
+        - port: 8080
+          httpSupport: true
+      envVariables:
+        RUST_LOG: info
+        PORT: "8080"
+```
+
+### Step 3: Configure Your Service
+
+<Tabs>
+  <Tab title="Using zCLI">
+    Create `description.yaml`:
+    
+    ```yaml
+    project:
+      name: my-rust-app
+    services:
+      - hostname: app
+        type: rust@latest
+        minContainers: 1
+        maxContainers: 6
+    ```
+    
+    Import:
+    ```bash
+    zcli project project-import description.yaml
+    ```
+  </Tab>
+  
+  <Tab title="Using GUI">
+    1. Go to your project dashboard
+    2. Click **Add new service**
+    3. Select **Rust** runtime
+    4. Choose version: **latest**
+    5. Set hostname: `app`
+    6. Click **Create service**
+  </Tab>
+</Tabs>
+
+### Step 4: Deploy
+
+```bash
+zcli service deploy
+```
+
+## Framework Examples
+
+### Actix-web (Full Example)
+
+```toml title="Cargo.toml"
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+env_logger = "0.11"
+```
+
+```rust title="src/main.rs"
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Result};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct Message {
+    text: String,
+}
+
+async fn index() -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(Message {
+        text: "Hello from Actix-web!".to_string(),
+    }))
+}
+
+async fn health() -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "status": "healthy"
+    })))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    
+    HttpServer::new(|| {
+        App::new()
+            .wrap(middleware::Logger::default())
+            .route("/", web::get().to(index))
+            .route("/health", web::get().to(health))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
+}
+```
+
+### Axum Framework
+
+```toml title="Cargo.toml"
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+```
+
+```rust title="src/main.rs"
+use axum::{
+    routing::get,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+
+#[derive(Serialize, Deserialize)]
+struct Message {
+    text: String,
+}
+
+async fn root() -> Json<Message> {
+    Json(Message {
+        text: "Hello from Axum!".to_string(),
+    })
+}
+
+async fn health() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "healthy"
+    }))
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/", get(root))
+        .route("/health", get(health));
+    
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    println!("Server running on {}", addr);
+    
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+```
+
+## Adding a Database
+
+Extend with PostgreSQL:
+
+```yaml title="description.yaml"
+services:
+  - hostname: app
+    type: rust@latest
+  
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA
+```
+
+Connect using SQLx:
+
+```toml title="Cargo.toml"
+[dependencies]
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres"] }
+```
+
+```rust
+use sqlx::postgres::PgPoolOptions;
+use std::env;
+
+#[tokio::main]
+async fn main() -> Result<(), sqlx::Error> {
+    let database_url = format!(
+        "postgres://{}:{}@db:5432/{}",
+        env::var("DB_USER").unwrap(),
+        env::var("DB_PASSWORD").unwrap(),
+        env::var("DB_NAME").unwrap(),
+    );
+    
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await?;
+    
+    // Use the pool in your application
+    
+    Ok(())
+}
+```
+
+## Build Optimizations
+
+### Optimize for Size and Speed
+
+```toml title="Cargo.toml"
+[profile.release]
+opt-level = 3        # Maximum optimization
+lto = true           # Link-time optimization
+codegen-units = 1    # Better optimization
+strip = true         # Strip symbols
+panic = "abort"      # Smaller binary
+```
+
+### Cache Dependencies
+
+```yaml title="zerops.yaml"
+build:
+  cache:
+    - target
+    - ~/.cargo/registry
+    - ~/.cargo/git
+```
+
+### Parallel Build
+
+```yaml
+build:
+  buildCommands:
+    - cargo build --release -j 4
+```
+
+## Environment Variables
+
+Set in `zerops.yaml`:
+
+```yaml
+run:
+  envVariables:
+    RUST_LOG: info
+    RUST_BACKTRACE: 1
+    APP_ENV: production
+```
+
+Access in code:
+
+```rust
+use std::env;
+
+fn main() {
+    let log_level = env::var("RUST_LOG")
+        .unwrap_or_else(|_| "info".to_string());
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with dependency errors">
+    Ensure `Cargo.toml` and `Cargo.lock` are committed:
+    ```bash
+    cargo build
+    git add Cargo.toml Cargo.lock
+    ```
+  </Accordion>
+  
+  <Accordion title="Binary not found">
+    Check your binary name matches:
+    ```yaml
+    build:
+      buildCommands:
+        - cargo build --release
+      deployFiles:
+        - target/release/myapp  # Match package name in Cargo.toml
+    ```
+  </Accordion>
+  
+  <Accordion title="Out of memory during build">
+    Reduce parallel compilation:
+    ```yaml
+    build:
+      buildCommands:
+        - cargo build --release -j 1
+    ```
+  </Accordion>
+  
+  <Accordion title="Need system libraries">
+    Install dependencies:
+    ```yaml
+    build:
+      os: ubuntu
+      prepareCommands:
+        - sudo apt-get update
+        - sudo apt-get install -y libpq-dev libssl-dev
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Runtime Overview" icon="book" href="/runtimes/rust/overview">
+    Learn about Rust runtime features
+  </Card>
+  <Card title="Environment Variables" icon="key" href="/references/environment-variables">
+    Manage configuration
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/features/scaling">
+    Configure auto-scaling
+  </Card>
+  <Card title="Monitoring" icon="chart-bar" href="/features/monitoring">
+    Monitor your application
+  </Card>
+</CardGroup>

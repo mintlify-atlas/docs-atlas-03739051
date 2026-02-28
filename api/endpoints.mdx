@@ -1,0 +1,222 @@
+---
+title: API Endpoints
+description: Complete reference of all Zerops REST API endpoints organized by resource type
+---
+
+The Zerops REST API provides endpoints for managing all aspects of your infrastructure. All endpoints are accessible at the base URL:
+
+```
+https://api.app-prg1.zerops.io/api/rest/public
+```
+
+<Note>
+  For detailed request/response schemas and to test API calls, visit the [full Swagger documentation](https://api.app-prg1.zerops.io/api/rest/public/swagger).
+</Note>
+
+## Resource Groups
+
+### Authentication & Users
+
+Manage authentication, user accounts, and access tokens.
+
+<CardGroup cols={2}>
+  <Card title="/auth" icon="key" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicAuth">
+    Authentication and token management
+  </Card>
+  <Card title="/user" icon="user" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicUser">
+    User account management
+  </Card>
+  <Card title="/user-token" icon="shield" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicUserToken">
+    Personal access tokens management
+  </Card>
+  <Card title="/user-notification" icon="bell" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicUserNotification">
+    User notifications management
+  </Card>
+</CardGroup>
+
+### Projects & Services
+
+Manage your projects and services.
+
+<CardGroup cols={2}>
+  <Card title="/project" icon="folder" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicProject">
+    Project management operations
+  </Card>
+  <Card title="/service-stack" icon="layer-group" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicServiceStack">
+    Service stack operations and configuration
+  </Card>
+  <Card title="/app-version" icon="code-branch" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicAppVersion">
+    Manage application versions, builds, and deployments
+  </Card>
+</CardGroup>
+
+<Warning>
+  The `/service-stack` endpoints are used for services management. This naming is non-obvious and important to note.
+</Warning>
+
+### Configuration & Environment
+
+Manage environment variables and configurations.
+
+<CardGroup cols={2}>
+  <Card title="/user-data" icon="database" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicUserData">
+    Environment variables management
+  </Card>
+  <Card title="/project-env" icon="gear" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicProjectEnv">
+    Project environment variables management
+  </Card>
+  <Card title="/settings" icon="sliders" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicSettings">
+    System settings and configurations
+  </Card>
+</CardGroup>
+
+<Warning>
+  The `/user-data` endpoints handle environment variables management, not user profile data. This naming is non-obvious and important to note.
+</Warning>
+
+### Networking & Routing
+
+Configure HTTP routing, port routing, and firewall rules.
+
+<CardGroup cols={2}>
+  <Card title="/public-http-routing" icon="globe" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicPublicHttpRouting">
+    HTTP routing configuration
+  </Card>
+  <Card title="/public-port-routing" icon="network-wired" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicPublicPortRouting">
+    Port routing and firewall rules configuration
+  </Card>
+</CardGroup>
+
+### Organization & Access
+
+Manage client accounts and user access.
+
+<CardGroup cols={2}>
+  <Card title="/client" icon="building" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicClient">
+    Client account management
+  </Card>
+  <Card title="/client-user" icon="users" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicClientUser">
+    User management within client accounts
+  </Card>
+</CardGroup>
+
+### Billing
+
+Manage billing operations and payments.
+
+<Card title="/billing" icon="credit-card" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicBilling">
+  Billing operations and payment management
+</Card>
+
+### Version Control Integration
+
+Connect and manage GitHub and GitLab repositories.
+
+<CardGroup cols={2}>
+  <Card title="/github" icon="github" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicGithub">
+    GitHub repository connections and authorization
+  </Card>
+  <Card title="/gitlab" icon="gitlab" href="https://api.app-prg1.zerops.io/api/rest/public/swagger/#/PublicGitlab">
+    GitLab repository connections and authorization
+  </Card>
+</CardGroup>
+
+## Common Operations
+
+Here are some common API operations you might need:
+
+### List Projects
+
+Retrieve all projects you have access to:
+
+```bash
+curl -X GET \
+  https://api.app-prg1.zerops.io/api/rest/public/project \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Get Project Details
+
+Get detailed information about a specific project:
+
+```bash
+curl -X GET \
+  https://api.app-prg1.zerops.io/api/rest/public/project/{projectId} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### List Services
+
+List all services in a project:
+
+```bash
+curl -X GET \
+  https://api.app-prg1.zerops.io/api/rest/public/service-stack \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Manage Environment Variables
+
+Get environment variables for a service:
+
+```bash
+curl -X GET \
+  https://api.app-prg1.zerops.io/api/rest/public/user-data \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+## Response Codes
+
+The API uses standard HTTP response codes:
+
+<ResponseField name="200 OK" type="success">
+  The request was successful
+</ResponseField>
+
+<ResponseField name="201 Created" type="success">
+  A new resource was successfully created
+</ResponseField>
+
+<ResponseField name="400 Bad Request" type="error">
+  The request was invalid or cannot be served
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="error">
+  Authentication failed or token is missing
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="error">
+  The authenticated user doesn't have permission
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="error">
+  The requested resource doesn't exist
+</ResponseField>
+
+<ResponseField name="429 Too Many Requests" type="error">
+  Rate limit exceeded
+</ResponseField>
+
+<ResponseField name="500 Internal Server Error" type="error">
+  An error occurred on the server
+</ResponseField>
+
+## Interactive Documentation
+
+For interactive API documentation with detailed request/response schemas and the ability to test endpoints:
+
+<Card 
+  title="Swagger Documentation" 
+  icon="book" 
+  href="https://api.app-prg1.zerops.io/api/rest/public/swagger"
+>
+  Explore the complete API reference with interactive examples
+</Card>
+
+## Need Help?
+
+If you need assistance with the API:
+
+- Check the [Authentication guide](/api/authentication) for auth issues
+- Review the [Swagger documentation](https://api.app-prg1.zerops.io/api/rest/public/swagger) for detailed schemas
+- Consider using the [Zerops CLI](/cli/overview) as an alternative to the API

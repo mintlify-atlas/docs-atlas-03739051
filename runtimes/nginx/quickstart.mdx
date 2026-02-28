@@ -1,0 +1,289 @@
+---
+title: Nginx Quickstart
+description: Get started with Nginx on Zerops in minutes. Learn how to create a service and deploy your static content.
+---
+
+This guide will help you deploy static content with Nginx on Zerops. You'll create a service, configure it, and deploy your application.
+
+## Prerequisites
+
+- A Zerops account ([sign up](https://zerops.io) if you don't have one)
+- A project in Zerops (create one in the GUI if needed)
+
+## Step 1: Create Nginx Service
+
+You can create an Nginx service using either the Zerops GUI or zCLI.
+
+<Tabs>
+  <Tab title="Using GUI">
+    1. Navigate to your project dashboard
+    2. Click **Add new service** in the Services menu
+    3. Select **Nginx** as the service type
+    4. Choose your Nginx version (or use `latest`)
+    5. Set a unique hostname (e.g., `app`, `web`, `frontend`)
+    6. Optionally configure:
+       - Secret environment variables
+       - Auto scaling settings
+    7. Click **Create service**
+
+    <Info>
+      The hostname must be unique within your project, contain only lowercase letters (a-z) or numbers (0-9), and be maximum 25 characters.
+    </Info>
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    First, [install and set up zCLI](/references/cli) if you haven't already.
+
+    Create a `description.yaml` file:
+
+    ```yaml description.yaml
+    project:
+      name: my-project
+    services:
+      - hostname: app
+        type: nginx@latest
+        minContainers: 1
+        maxContainers: 6
+    ```
+
+    Then import the project:
+
+    ```bash
+    zcli project project-import description.yaml
+    ```
+
+    <Accordion title="Add to Existing Project">
+      If you already have a project, create an `import.yaml` file with just the services section:
+
+      ```yaml import.yaml
+      services:
+        - hostname: app
+          type: nginx@latest
+          minContainers: 1
+          maxContainers: 6
+      ```
+
+      Then run:
+
+      ```bash
+      zcli project service-import import.yaml
+      ```
+    </Accordion>
+  </Tab>
+</Tabs>
+
+## Step 2: Configure Your Application
+
+Create a `zerops.yaml` file in the root of your repository to configure how Zerops builds and runs your application.
+
+<Tabs>
+  <Tab title="Pre-built Files">
+    If you already have built static files and just want to deploy them:
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        run:
+          base: nginx@latest
+          documentRoot: public
+    ```
+
+    This minimal configuration:
+    - Uses the latest Nginx version
+    - Serves files from the `/var/www/public` directory
+    - Uses default settings for everything else
+  </Tab>
+  
+  <Tab title="Build + Deploy">
+    If you need to build your application (e.g., using Node.js, npm, etc.):
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        build:
+          base: nodejs@20
+          buildCommands:
+            - npm install
+            - npm run build
+          deployFiles:
+            - dist/~
+          cache: node_modules
+        run:
+          base: nginx@latest
+          documentRoot: dist
+    ```
+
+    This configuration:
+    - Uses Node.js 20 for building
+    - Installs dependencies and runs build
+    - Deploys everything from the `dist` folder
+    - Caches `node_modules` for faster builds
+    - Serves the built files from `/var/www/dist`
+  </Tab>
+  
+  <Tab title="Advanced">
+    For more complex scenarios with custom commands and environment variables:
+
+    ```yaml zerops.yaml
+    zerops:
+      - setup: app
+        build:
+          base: nodejs@20
+          prepareCommands:
+            - npm install -g pnpm
+          buildCommands:
+            - pnpm install
+            - pnpm run build
+          deployFiles:
+            - dist/~
+          cache:
+            - node_modules
+            - .pnpm-store
+        run:
+          base: nginx@latest
+          documentRoot: dist
+          initCommands:
+            - rm -rf ./cache
+          envVariables:
+            APP_ENV: production
+            API_URL: https://api.example.com
+    ```
+
+    This advanced setup:
+    - Installs pnpm as a custom package manager
+    - Caches both node_modules and pnpm store
+    - Clears cache on each container start
+    - Sets environment variables for runtime
+  </Tab>
+</Tabs>
+
+## Step 3: Deploy Your Application
+
+<Tabs>
+  <Tab title="From Git">
+    The recommended approach is to connect your Git repository:
+
+    1. Go to your service detail in Zerops GUI
+    2. Click **Connect to GitHub/GitLab**
+    3. Authorize Zerops and select your repository
+    4. Choose the branch to deploy from
+    5. Zerops will automatically detect your `zerops.yaml`
+    6. Click **Deploy**
+
+    <Tip>
+      Set up automatic deployments by enabling **Deploy on push**. Every commit to your selected branch will trigger a new deployment.
+    </Tip>
+  </Tab>
+  
+  <Tab title="Using zCLI">
+    Deploy directly from your local machine using zCLI:
+
+    ```bash
+    # Login to Zerops
+    zcli login
+
+    # Deploy your application
+    zcli push
+    ```
+
+    The `zcli push` command will:
+    - Package your application
+    - Upload it to Zerops
+    - Trigger the build and deploy pipeline
+    - Show real-time logs
+
+    <Info>
+      Make sure you're in the directory containing your `zerops.yaml` file when running `zcli push`.
+    </Info>
+  </Tab>
+</Tabs>
+
+## Step 4: Configure Public Access
+
+By default, your service is only accessible within the Zerops private network. To make it publicly accessible:
+
+1. Go to your service detail in Zerops GUI
+2. Navigate to **Public access & routing** in the left menu
+3. Click **Add new routing rule**
+4. Configure your domain:
+   - Use a Zerops subdomain (e.g., `app.zerops.app`)
+   - Or add your custom domain
+5. Save the routing rule
+
+<Info>
+  For custom domains, you'll need to add DNS records pointing to Zerops. The GUI will show you exactly what records to create.
+</Info>
+
+## Example: Deploy a React App
+
+Here's a complete example for deploying a React application:
+
+```yaml zerops.yaml
+zerops:
+  - setup: app
+    build:
+      base: nodejs@20
+      buildCommands:
+        - npm ci
+        - npm run build
+      deployFiles:
+        - build/~
+      cache: node_modules
+    run:
+      base: nginx@latest
+      documentRoot: build
+```
+
+**Project structure:**
+```
+my-react-app/
+├── public/
+├── src/
+├── package.json
+├── package-lock.json
+└── zerops.yaml
+```
+
+**Deployment steps:**
+1. Add `zerops.yaml` to your React project root
+2. Commit and push to your Git repository
+3. Connect the repository in Zerops GUI
+4. Watch the build and deploy process
+5. Access your app via the provided URL
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="key" href="/runtimes/nginx/env-variables">
+    Configure environment variables
+  </Card>
+  <Card title="Custom Nginx Config" icon="file-code" href="/runtimes/nginx/customize-web-server">
+    Customize your web server
+  </Card>
+  <Card title="SEO Optimization" icon="magnifying-glass" href="/runtimes/nginx/customize-web-server#seo-prerender-support">
+    Set up Prerender.io for better SEO
+  </Card>
+  <Card title="Scaling" icon="chart-line" href="/runtimes/nginx/scaling">
+    Configure auto scaling
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="My app shows a blank page">
+    Check that your `documentRoot` in `zerops.yaml` matches where your build output is located. For example, if your build creates a `dist` folder, use `documentRoot: dist`.
+  </Accordion>
+  
+  <Accordion title="Client-side routing doesn't work (404 errors)">
+    The default Nginx configuration handles this automatically with `try_files $uri $uri/ /index.html`. If you've customized your Nginx config, make sure you have this directive.
+  </Accordion>
+  
+  <Accordion title="Build fails with 'command not found'">
+    Make sure you're using the correct base image for your build. For example, if you're using npm commands, you need `base: nodejs@<version>` in your build section.
+  </Accordion>
+  
+  <Accordion title="How do I see build logs?">
+    Go to your service detail in Zerops GUI, click on **Service dashboard & runtime containers**, then **Open pipeline detail** to see complete build and deploy logs.
+  </Accordion>
+</AccordionGroup>
