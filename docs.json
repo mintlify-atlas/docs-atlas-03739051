@@ -121,7 +121,8 @@
               "services/postgresql/backup",
               "services/mariadb/overview",
               "services/mariadb/create",
-              "services/mariadb/connect"
+              "services/mariadb/connect",
+              "services/clickhouse/overview"
             ]
           },
           {

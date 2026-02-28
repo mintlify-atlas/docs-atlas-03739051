@@ -1,0 +1,254 @@
+---
+title: ClickHouse overview
+description: Production-ready ClickHouse in Zerops platform with automated scaling and enterprise reliability for columnar analytics databases
+---
+
+Zerops provides a fully managed [ClickHouse](https://clickhouse.com/) columnar database optimized for blazing-fast analytical queries on massive datasets, making it ideal for data warehousing and real-time analytics applications.
+
+## Supported Versions
+
+Zerops supports ClickHouse versions:
+- ClickHouse 24.x (latest)
+- ClickHouse 23.x
+
+<Tip>
+Use `clickhouse@latest` in your import YAML to always deploy the newest supported version.
+</Tip>
+
+## Service Configuration
+
+ClickHouse implementation in Zerops features optimized default settings designed for analytical workloads and data warehousing use cases.
+
+### Resource Allocation
+
+Zerops automatically allocates resources to your ClickHouse service based on demand within the limits defined in your [automatic scaling configuration](/features/scaling).
+
+## High Availability and Deployment Modes
+
+<Warning>
+Deployment mode is selected during service creation and cannot be changed later.
+</Warning>
+
+### High-availability (HA) setup
+
+The recommended solution for production workloads and mission-critical analytics:
+
+- **3 data nodes** with automatic monitoring, repairs, and replication factor of 3
+- **Default cluster name:** `zerops` (currently 1 shard with 3 replicas)
+
+#### Replication Configuration
+
+The `Replicated` database engine handles replication automatically, but there are specific requirements you need to follow:
+
+**For Database Operations**
+
+Use this configuration when creating/managing databases:
+
+```sql
+CREATE DATABASE uk ON CLUSTER '{cluster}'
+ENGINE = Replicated('/clickhouse/databases/{uuid}', '{shard}', '{replica}');
+```
+
+**For Table Operations**
+
+Use `ENGINE = ReplicatedMergeTree` when creating tables (without the `ON CLUSTER '{cluster}'` clause):
+
+```sql
+CREATE TABLE uk.uk_price_paid
+(
+    price     UInt32,
+    date      Date,
+    postcode1 LowCardinality(String),
+    postcode2 LowCardinality(String),
+    type      Enum8('terraced' = 1, 'semi-detached' = 2, 'detached' = 3, 'flat' = 4, 'other' = 0),
+    is_new    UInt8,
+    duration  Enum8('freehold' = 1, 'leasehold' = 2, 'unknown' = 0),
+    addr1     String,
+    addr2     String,
+    street    LowCardinality(String),
+    locality  LowCardinality(String),
+    town      LowCardinality(String),
+    district  LowCardinality(String),
+    county    LowCardinality(String)
+) ENGINE = ReplicatedMergeTree ORDER BY (postcode1, postcode2, addr1, addr2);
+```
+
+<Info>
+For more details, see the [official ClickHouse replication documentation](https://clickhouse.com/docs/engines/database-engines/replicated).
+</Info>
+
+You can use other `Replicated*` engines from the MergeTree family. Replication is only supported for tables in the MergeTree family:
+
+- `ReplicatedMergeTree`
+- `ReplicatedSummingMergeTree`
+- `ReplicatedReplacingMergeTree`
+- `ReplicatedAggregatingMergeTree`
+- `ReplicatedCollapsingMergeTree`
+- `ReplicatedVersionedCollapsingMergeTree`
+- `ReplicatedGraphiteMergeTree`
+
+User management (users, grants, etc.) is replicated by Keeper by default. The `ON CLUSTER '{cluster}'` clause is not needed when creating/deleting users or changing grants.
+
+### Single container installation
+
+Suitable for development and testing environments:
+
+- Consists of 1 ClickHouse node
+- Lower resource requirements
+- No automatic replication
+
+<Warning>
+Use for development purposes or non-critical data only. **Make sure to have backups enabled** if using in production, as you can lose your data due to container volatility.
+</Warning>
+
+## Network Access & Protocols
+
+Zerops automatically configures secure authentication for your ClickHouse service.
+
+### Default Database
+
+Zerops creates a default database with the same name as your service hostname (`<service-hostname>`) during service creation.
+
+### Default Users
+
+**`zerops` User**
+- Created automatically upon service creation
+- Has privileges for the default database
+- Password available as environment variable `password`
+
+**`super` User**
+- Administrative user for cluster management
+- Can create new databases, users, and manage permissions
+- Password available as environment variable `superUserPassword`
+
+### Access Methods
+
+Services within the same project can access ClickHouse directly using:
+
+```
+<service-hostname>:<port>
+```
+
+For HA cluster setups, you can also access specific data nodes:
+
+```
+node-stable-<1..3>.db.<service-hostname>.zerops:<port>
+```
+
+For external access, use `zcli` VPN to connect using the same connection strings.
+
+### Connection Protocols
+
+ClickHouse offers multiple interfaces for different use cases:
+
+#### Native TCP Protocol
+
+**Port:** `9000` (Environment variable: `port` or `portNative`)
+
+Optimal for high-performance applications and ClickHouse-native clients.
+
+See the [official ClickHouse TCP documentation](https://clickhouse.com/docs/interfaces/tcp).
+
+#### HTTP/HTTPS Interface
+
+**Port:** `8123` (Environment variable: `portHttp`)
+
+Ideal for web applications and REST API integrations.
+
+You can setup HTTPS domain access or enable subdomain for access from outside the project:
+
+- HTTPS URL: `https://clickhouse.my-awesome-domain.tld`
+- JDBC connection string example: `jdbc:clickhouse:https://clickhouse.my-awesome-domain.tld:443/?ssl=true&sslmode=NONE`
+
+See the [official ClickHouse HTTP documentation](https://clickhouse.com/docs/interfaces/http).
+
+#### MySQL Protocol
+
+**Port:** `9004` (Environment variable: `portMysql`)
+
+Enables connectivity from MySQL-compatible tools and applications.
+
+See the [official ClickHouse MySQL documentation](https://clickhouse.com/docs/interfaces/mysql).
+
+#### PostgreSQL Protocol
+
+**Port:** `9005` (Environment variable: `portPostgresql`)
+
+Allows integration with PostgreSQL-compatible clients and ORMs.
+
+See the [official ClickHouse PostgreSQL documentation](https://clickhouse.com/docs/interfaces/postgresql).
+
+## Backup and Recovery
+
+Zerops provides comprehensive backup functionality using ClickHouse's native backup capabilities.
+
+### Backup Process
+
+- Backups are performed using ClickHouse SQL command `BACKUP ALL ...` with `super` user permissions
+- All databases are backed up (excluding system databases)
+- Backup files are stored as `tar.gz` archives
+- Contains the complete folder structure produced by the SQL backup command
+
+### Restore Options
+
+<Tabs>
+  <Tab title="Custom S3 Bucket">
+    1. Download backup from Zerops GUI or via API
+    2. Extract the tar.gz archive and upload to your S3 bucket
+    3. Restore using ClickHouse SQL commands:
+
+    ```sql
+    -- Restore specific table
+    RESTORE TABLE mydb.mytable AS mydb.mytable2
+    FROM S3('https://storage-prg1.zerops.io/mybucket/path/to/dir/with/untarred/backup',
+            'my-access-key-id', 'my-secret-key');
+
+    -- Restore all data
+    RESTORE ALL FROM S3('https://storage-prg1.zerops.io/mybucket/path/to/backup',
+                       'my-access-key-id', 'my-secret-key');
+    ```
+
+    See the [ClickHouse backup documentation](https://clickhouse.com/docs/operations/backup#configuring-backuprestore-to-use-an-s3-endpoint).
+  </Tab>
+  
+  <Tab title="Support-Assisted">
+    Contact Zerops support on Discord, and we'll place the backup on the container's filesystem for restoration using the `File` driver.
+
+    See [ClickHouse documentation](https://clickhouse.com/docs/operations/backup) for further information.
+  </Tab>
+</Tabs>
+
+<Note>
+A simple GUI/API action for backup restoration is on our roadmap for future releases.
+</Note>
+
+## Troubleshooting
+
+### Connection Problems
+
+- Verify you're using the correct port for your chosen protocol
+- Check that your service is running and healthy in the Zerops dashboard
+- For HA clusters, try connecting to specific nodes if the main endpoint fails
+- Ensure authentication credentials are correct
+
+### Replication Issues
+
+- Verify you're using `ON CLUSTER '{cluster}'` for database operations
+- Confirm tables use `ReplicatedMergeTree` engines
+- Check cluster health in the Zerops dashboard
+
+## Use Cases
+
+ClickHouse excels in:
+
+- **Real-time Analytics** - Process and analyze billions of rows in milliseconds
+- **Data Warehousing** - Store and query massive datasets efficiently
+- **Time-series Data** - Monitor metrics, logs, and event streams
+- **Business Intelligence** - Power dashboards and reporting tools
+- **Ad-tech & Clickstream** - Track user behavior and campaign performance
+
+## Support
+
+For advanced configurations or custom requirements:
+- Join our [Discord community](https://discord.gg/zeropsio)
+- Contact support via [email](mailto:support@zerops.io)
